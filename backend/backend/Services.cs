@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using CryptoAgent.Api.Models;
 using OpenAI.Chat;
@@ -77,25 +78,29 @@ public class MarketDataService
     public async Task<MarketSnapshot> GetSnapshotAsync()
     {
         var client = _httpClientFactory.CreateClient("coingecko");
-        
+
         // Get prices
         var pricesResponse = await client.GetFromJsonAsync<Dictionary<string, Dictionary<string, decimal>>>("/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=gbp");
-        var btcPrice = pricesResponse?["bitcoin"]["gbp"] ?? 0;
-        var ethPrice = pricesResponse?["ethereum"]["gbp"] ?? 0;
+        var btcPrice = pricesResponse != null &&
+                       pricesResponse.TryGetValue("bitcoin", out var btcDict) &&
+                       btcDict.TryGetValue("gbp", out var btc) ? btc : 0;
+        var ethPrice = pricesResponse != null &&
+                       pricesResponse.TryGetValue("ethereum", out var ethDict) &&
+                       ethDict.TryGetValue("gbp", out var eth) ? eth : 0;
 
         // Get changes
         // Note: CoinGecko API structure for /coins/markets is a list of objects
         // We need to handle potential API errors or empty responses gracefully
-        try 
+        try
         {
             var marketsResponse = await client.GetFromJsonAsync<List<JsonElement>>("/api/v3/coins/markets?vs_currency=gbp&ids=bitcoin,ethereum&price_change_percentage=24h,7d");
-            
+
             decimal btc24h = 0, eth24h = 0, btc7d = 0, eth7d = 0;
 
             foreach (var item in marketsResponse ?? new List<JsonElement>())
             {
                 var id = item.GetProperty("id").GetString();
-                
+
                 // Safe property access
                 decimal change24h = 0;
                 if (item.TryGetProperty("price_change_percentage_24h", out var p24h) && p24h.ValueKind == JsonValueKind.Number)
@@ -128,27 +133,27 @@ public class MarketDataService
                 EthChange7dPct = eth7d / 100m
             };
         }
-        catch
+        catch (Exception ex)
         {
             // Fallback if markets endpoint fails but prices succeeded
-             return new MarketSnapshot
+            Console.WriteLine($"Error fetching market data: {ex.Message}");
+            return new MarketSnapshot
             {
                 TimestampUtc = DateTime.UtcNow,
                 BtcPriceGbp = btcPrice,
                 EthPriceGbp = ethPrice
             };
-            };
         }
-    };
+    }
 
     public async Task<List<Quote>> GetHistoricalDataAsync(string coinId, int days)
     {
-        var client = HttpClientFactory.CreateClient("coingecko");
+        var client = _httpClientFactory.CreateClient("coingecko");
         try
         {
             // CoinGecko OHLC: [[time, open, high, low, close, volume], ...]
             var data = await client.GetFromJsonAsync<List<List<decimal>>>($"/api/v3/coins/{coinId}/ohlc?vs_currency=gbp&days={days}");
-            
+
             var quotes = new List<Quote>();
             if (data == null) return quotes;
 
