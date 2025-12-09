@@ -2,69 +2,12 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CryptoAgent.Api.Models;
+using CryptoAgent.Api.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 using OpenAI.Chat;
 using Skender.Stock.Indicators;
 
 namespace CryptoAgent.Api.Services;
-
-public class PortfolioStore
-{
-    private readonly string _filePath;
-    private readonly string _tradesPath;
-
-    public PortfolioStore()
-    {
-        _filePath = Path.Combine(AppContext.BaseDirectory, "portfolio.json");
-        _tradesPath = Path.Combine(AppContext.BaseDirectory, "trades.json");
-    }
-
-    public async Task<Portfolio> GetAsync()
-    {
-        if (!File.Exists(_filePath))
-        {
-            var initial = new Portfolio { CashGbp = 50m };
-            await SaveAsync(initial);
-            return initial;
-        }
-
-        var json = await File.ReadAllTextAsync(_filePath);
-        return JsonSerializer.Deserialize<Portfolio>(json) ?? new Portfolio { CashGbp = 50m };
-    }
-
-    public async Task SaveAsync(Portfolio portfolio)
-    {
-        var json = JsonSerializer.Serialize(portfolio, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_filePath, json);
-    }
-
-    public async Task LogTradeAsync(Trade trade)
-    {
-        var trades = await GetAllTradesAsync();
-        trades.Add(trade);
-        var json = JsonSerializer.Serialize(trades, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_tradesPath, json);
-    }
-
-    public async Task<List<Trade>> GetRecentTradesAsync(int count)
-    {
-        var trades = await GetAllTradesAsync();
-        return trades.OrderByDescending(t => t.TimestampUtc).Take(count).ToList();
-    }
-
-    public async Task<int> CountTradesTodayAsync()
-    {
-        var trades = await GetAllTradesAsync();
-        var today = DateTime.UtcNow.Date;
-        return trades.Count(t => t.TimestampUtc.Date == today);
-    }
-
-    private async Task<List<Trade>> GetAllTradesAsync()
-    {
-        if (!File.Exists(_tradesPath)) return new List<Trade>();
-        var json = await File.ReadAllTextAsync(_tradesPath);
-        return JsonSerializer.Deserialize<List<Trade>>(json) ?? new List<Trade>();
-    }
-}
 
 public class MarketDataService
 {
@@ -79,7 +22,6 @@ public class MarketDataService
     {
         var client = _httpClientFactory.CreateClient("coingecko");
 
-        // Get prices
         var pricesResponse = await client.GetFromJsonAsync<Dictionary<string, Dictionary<string, decimal>>>("/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=gbp");
         var btcPrice = pricesResponse != null &&
                        pricesResponse.TryGetValue("bitcoin", out var btcDict) &&
@@ -88,9 +30,6 @@ public class MarketDataService
                        pricesResponse.TryGetValue("ethereum", out var ethDict) &&
                        ethDict.TryGetValue("gbp", out var eth) ? eth : 0;
 
-        // Get changes
-        // Note: CoinGecko API structure for /coins/markets is a list of objects
-        // We need to handle potential API errors or empty responses gracefully
         try
         {
             var marketsResponse = await client.GetFromJsonAsync<List<JsonElement>>("/api/v3/coins/markets?vs_currency=gbp&ids=bitcoin,ethereum&price_change_percentage=24h,7d");
@@ -101,7 +40,6 @@ public class MarketDataService
             {
                 var id = item.GetProperty("id").GetString();
 
-                // Safe property access
                 decimal change24h = 0;
                 if (item.TryGetProperty("price_change_percentage_24h", out var p24h) && p24h.ValueKind == JsonValueKind.Number)
                     change24h = p24h.GetDecimal();
@@ -135,7 +73,6 @@ public class MarketDataService
         }
         catch (Exception ex)
         {
-            // Fallback if markets endpoint fails but prices succeeded
             Console.WriteLine($"Error fetching market data: {ex.Message}");
             return new MarketSnapshot
             {
@@ -151,7 +88,6 @@ public class MarketDataService
         var client = _httpClientFactory.CreateClient("coingecko");
         try
         {
-            // CoinGecko OHLC: [[time, open, high, low, close, volume], ...]
             var data = await client.GetFromJsonAsync<List<List<decimal>>>($"/api/v3/coins/{coinId}/ohlc?vs_currency=gbp&days={days}");
 
             var quotes = new List<Quote>();
@@ -181,38 +117,13 @@ public class MarketDataService
     }
 }
 
-public class PerformanceStore
-{
-    private readonly string _filePath;
-
-    public PerformanceStore()
-    {
-        _filePath = Path.Combine(AppContext.BaseDirectory, "performance.json");
-    }
-
-    public async Task<List<PerformanceSnapshot>> GetAllAsync()
-    {
-        if (!File.Exists(_filePath)) return new List<PerformanceSnapshot>();
-        var json = await File.ReadAllTextAsync(_filePath);
-        return JsonSerializer.Deserialize<List<PerformanceSnapshot>>(json) ?? new List<PerformanceSnapshot>();
-    }
-
-    public async Task AppendAsync(PerformanceSnapshot snapshot)
-    {
-        var list = await GetAllAsync();
-        list.Add(snapshot);
-        var json = JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_filePath, json);
-    }
-}
-
 public class RiskEngine
 {
-    public (LastDecision decision, Portfolio updatedPortfolio, Trade? trade) Apply(
-        LlmSuggestion suggestion, 
-        Portfolio portfolio, 
-        MarketSnapshot market, 
-        int tradesToday, 
+    public (LastDecision decision, Trade? trade) Apply(
+        LlmSuggestion suggestion,
+        Portfolio portfolio,
+        MarketSnapshot market,
+        int tradesToday,
         RiskConfig config)
     {
         var decision = new LastDecision
@@ -228,55 +139,57 @@ public class RiskEngine
             RationaleShort = suggestion.RationaleShort
         };
 
-        // 1. Basic checks
         if (suggestion.Action == RawActionType.Hold || suggestion.Asset == AssetType.None)
         {
             decision.RiskReason = "LLM suggested HOLD or None";
-            return (decision, portfolio, null);
+            return (decision, null);
         }
 
         if (tradesToday >= config.MaxTradesPerDay)
         {
             decision.RiskReason = "Max trades per day reached";
-            return (decision, portfolio, null);
+            return (decision, null);
         }
 
         if (suggestion.SizeGbp <= 0)
         {
             decision.RiskReason = "Trade size <= 0";
-            return (decision, portfolio, null);
+            return (decision, null);
+        }
+
+        if (suggestion.SizeGbp > config.MaxTradeSizeGbp)
+        {
+            decision.RiskReason = "Trade size exceeds maximum allowed";
+            return (decision, null);
         }
 
         decimal price = suggestion.Asset == AssetType.Btc ? market.BtcPriceGbp : market.EthPriceGbp;
         if (price <= 0)
         {
             decision.RiskReason = "Invalid price";
-            return (decision, portfolio, null);
+            return (decision, null);
         }
 
-        // 2. Buy checks
         if (suggestion.Action == RawActionType.Buy)
         {
             if (portfolio.CashGbp < suggestion.SizeGbp)
             {
                 decision.RiskReason = "Insufficient cash";
-                return (decision, portfolio, null);
+                return (decision, null);
             }
 
-            // 7d rally check
             var change7d = suggestion.Asset == AssetType.Btc ? market.BtcChange7dPct : market.EthChange7dPct;
             if (change7d > config.MaxBuyAfter7dRallyPct)
             {
                 decision.RiskReason = $"7d change {change7d:P1} exceeds limit {config.MaxBuyAfter7dRallyPct:P1}";
-                return (decision, portfolio, null);
+                return (decision, null);
             }
 
-            // Allocation check (simulate)
             var amountToBuy = suggestion.SizeGbp / price;
             var newBtc = portfolio.BtcAmount + (suggestion.Asset == AssetType.Btc ? amountToBuy : 0);
             var newEth = portfolio.EthAmount + (suggestion.Asset == AssetType.Eth ? amountToBuy : 0);
             var newCash = portfolio.CashGbp - suggestion.SizeGbp;
-            
+
             var newBtcVal = newBtc * market.BtcPriceGbp;
             var newEthVal = newEth * market.EthPriceGbp;
             var newTotal = newCash + portfolio.VaultGbp + newBtcVal + newEthVal;
@@ -284,23 +197,18 @@ public class RiskEngine
             if (newBtcVal / newTotal > config.MaxBtcAllocationPct)
             {
                 decision.RiskReason = "Would breach Max BTC Allocation";
-                return (decision, portfolio, null);
+                return (decision, null);
             }
             if (newEthVal / newTotal > config.MaxEthAllocationPct)
             {
                 decision.RiskReason = "Would breach Max ETH Allocation";
-                return (decision, portfolio, null);
+                return (decision, null);
             }
             if ((newCash + portfolio.VaultGbp) / newTotal < config.MinCashAllocationPct)
             {
                 decision.RiskReason = "Would breach Min Cash Allocation";
-                return (decision, portfolio, null);
+                return (decision, null);
             }
-
-            // Accepted
-            portfolio.CashGbp = newCash;
-            if (suggestion.Asset == AssetType.Btc) portfolio.BtcAmount = newBtc;
-            else portfolio.EthAmount = newEth;
 
             decision.FinalAction = RawActionType.Buy;
             decision.FinalAsset = suggestion.Asset;
@@ -317,10 +225,9 @@ public class RiskEngine
                 PriceGbp = price
             };
 
-            return (decision, portfolio, trade);
+            return (decision, trade);
         }
 
-        // 3. Sell checks
         if (suggestion.Action == RawActionType.Sell)
         {
             var currentAmount = suggestion.Asset == AssetType.Btc ? portfolio.BtcAmount : portfolio.EthAmount;
@@ -328,49 +235,42 @@ public class RiskEngine
 
             if (amountToSell > currentAmount)
             {
-                 // Cap at max available
-                 amountToSell = currentAmount;
-                 suggestion.SizeGbp = amountToSell * price; // Adjust size
-            }
-            
-            if (suggestion.SizeGbp < 0.01m) // Min trade size check effectively
-            {
-                 decision.RiskReason = "Sell size too small";
-                 return (decision, portfolio, null);
+                amountToSell = currentAmount;
             }
 
-            // Accepted
-            portfolio.CashGbp += suggestion.SizeGbp;
-            if (suggestion.Asset == AssetType.Btc) portfolio.BtcAmount -= amountToSell;
-            else portfolio.EthAmount -= amountToSell;
+            var adjustedSizeGbp = amountToSell * price;
+            if (adjustedSizeGbp < 0.01m)
+            {
+                decision.RiskReason = "Sell size too small";
+                return (decision, null);
+            }
 
             decision.FinalAction = RawActionType.Sell;
             decision.FinalAsset = suggestion.Asset;
-            decision.FinalSizeGbp = suggestion.SizeGbp;
+            decision.FinalSizeGbp = adjustedSizeGbp;
             decision.Executed = true;
             decision.RiskReason = "Accepted";
 
-             var trade = new Trade
+            var trade = new Trade
             {
                 TimestampUtc = DateTime.UtcNow,
                 Asset = suggestion.Asset,
                 Action = RawActionType.Sell,
-                SizeGbp = suggestion.SizeGbp,
+                SizeGbp = adjustedSizeGbp,
                 PriceGbp = price
             };
 
-            return (decision, portfolio, trade);
+            return (decision, trade);
         }
 
-        return (decision, portfolio, null);
+        return (decision, null);
     }
 }
 
 public class AgentService
 {
-    private readonly PortfolioStore _portfolioStore;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly MarketDataService _marketDataService;
-    private readonly PerformanceStore _performanceStore;
     private readonly RiskEngine _riskEngine;
     private readonly ChatClient _chatClient;
     private readonly RiskConfig _riskConfig;
@@ -379,17 +279,15 @@ public class AgentService
     public LastDecision? LastDecision { get; private set; }
 
     public AgentService(
-        PortfolioStore portfolioStore,
+        IServiceScopeFactory scopeFactory,
         MarketDataService marketDataService,
-        PerformanceStore performanceStore,
         RiskEngine riskEngine,
         ChatClient chatClient,
         RiskConfig riskConfig,
         AppConfig appConfig)
     {
-        _portfolioStore = portfolioStore;
+        _scopeFactory = scopeFactory;
         _marketDataService = marketDataService;
-        _performanceStore = performanceStore;
         _riskEngine = riskEngine;
         _chatClient = chatClient;
         _riskConfig = riskConfig;
@@ -398,17 +296,21 @@ public class AgentService
 
     public async Task RunOnceAsync()
     {
-        var portfolio = await _portfolioStore.GetAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var portfolioRepository = scope.ServiceProvider.GetRequiredService<PortfolioRepository>();
+        var performanceRepository = scope.ServiceProvider.GetRequiredService<PerformanceRepository>();
+        var exchangeClient = scope.ServiceProvider.GetRequiredService<IExchangeClient>();
+
+        var portfolio = await portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
-        
-        // Fetch history and calc indicators
+
         var btcHistory = await _marketDataService.GetHistoricalDataAsync("bitcoin", 60);
         var ethHistory = await _marketDataService.GetHistoricalDataAsync("ethereum", 60);
 
         market.BtcTechnical = CalculateTechnical(btcHistory);
         market.EthTechnical = CalculateTechnical(ethHistory);
 
-        var tradesToday = await _portfolioStore.CountTradesTodayAsync();
+        var tradesToday = await portfolioRepository.CountTradesTodayAsync();
 
         var dto = portfolio.ToDto(market);
 
@@ -447,7 +349,7 @@ Rules:
         var userPrompt = JsonSerializer.Serialize(state);
 
         LlmSuggestion suggestion;
-        try 
+        try
         {
             ChatCompletion completion = await _chatClient.CompleteChatAsync(
                 new List<ChatMessage>
@@ -455,11 +357,10 @@ Rules:
                     new SystemChatMessage(systemPrompt),
                     new UserChatMessage(userPrompt)
                 });
-            
+
             var text = completion.Content[0].Text;
-            // Simple cleanup if markdown code blocks are used
             text = text.Replace("```json", "").Replace("```", "").Trim();
-            
+
             suggestion = JsonSerializer.Deserialize<LlmSuggestion>(text) ?? new LlmSuggestion { Action = RawActionType.Hold };
         }
         catch
@@ -467,43 +368,45 @@ Rules:
             suggestion = new LlmSuggestion { Action = RawActionType.Hold, RationaleShort = "LLM Error" };
         }
 
-        var (decision, updatedPortfolio, trade) = _riskEngine.Apply(suggestion, portfolio, market, tradesToday, _riskConfig);
-        
+        var (decision, trade) = _riskEngine.Apply(suggestion, portfolio, market, tradesToday, _riskConfig);
+        decision.Mode = _appConfig.Mode.ToString().ToUpperInvariant();
         LastDecision = decision;
 
         if (decision.Executed && trade != null)
         {
-            await _portfolioStore.SaveAsync(updatedPortfolio);
-            await _portfolioStore.LogTradeAsync(trade);
-            portfolio = updatedPortfolio; // Update local ref
+            var side = trade.Action == RawActionType.Buy ? OrderSide.Buy : OrderSide.Sell;
+            var symbol = trade.Asset == AssetType.Btc ? "BTC" : "ETH";
+
+            var executedTrade = await exchangeClient.PlaceMarketOrderAsync(symbol, trade.SizeGbp, side);
+            decision.FinalSizeGbp = executedTrade.SizeGbp;
+            decision.RiskReason = "Executed";
         }
 
-        // Profit skimming
-        // Re-calc equity
+        portfolio = await portfolioRepository.GetAsync();
         dto = portfolio.ToDto(market);
-        
+
         if (portfolio.HighWatermarkGbp == 0)
         {
             portfolio.HighWatermarkGbp = dto.TotalValueGbp;
-            await _portfolioStore.SaveAsync(portfolio);
+            await portfolioRepository.SaveAsync(portfolio);
         }
-        else if (dto.TotalValueGbp > portfolio.HighWatermarkGbp * 1.10m) // 10% threshold
+        else if (dto.TotalValueGbp > portfolio.HighWatermarkGbp * 1.10m)
         {
             var profit = dto.TotalValueGbp - portfolio.HighWatermarkGbp;
-            var skimAmount = profit * 0.30m; // 30% skim
-            
-            if (portfolio.CashGbp >= skimAmount) // Only skim from cash
+            var skimAmount = profit * 0.30m;
+
+            if (portfolio.CashGbp >= skimAmount)
             {
                 portfolio.CashGbp -= skimAmount;
                 portfolio.VaultGbp += skimAmount;
                 portfolio.HighWatermarkGbp = dto.TotalValueGbp;
-                await _portfolioStore.SaveAsync(portfolio);
+                await portfolioRepository.SaveAsync(portfolio);
             }
         }
 
-        // Performance snapshot
-        var allPerf = await _performanceStore.GetAllAsync();
-        var lastCumulated = allPerf.LastOrDefault()?.CumulatedAiCostGbp ?? 0;
+        var allPerf = await performanceRepository.GetAllAsync();
+        var lastCumulatedAi = allPerf.LastOrDefault()?.CumulatedAiCostGbp ?? 0;
+        var totalFees = await portfolioRepository.GetTotalFeesAsync();
 
         var perf = new PerformanceSnapshot
         {
@@ -511,14 +414,15 @@ Rules:
             PortfolioValueGbp = dto.TotalValueGbp,
             VaultGbp = portfolio.VaultGbp,
             NetDepositsGbp = 0,
-            CumulatedAiCostGbp = lastCumulated + _appConfig.EstimatedAiCostPerRunGbp
+            CumulatedAiCostGbp = lastCumulatedAi + _appConfig.EstimatedAiCostPerRunGbp,
+            CumulatedFeesGbp = totalFees
         };
-        await _performanceStore.AppendAsync(perf);
+        await performanceRepository.AppendAsync(perf);
     }
 
     private TechnicalAnalysis? CalculateTechnical(List<Quote> history)
     {
-        if (history.Count < 50) return null; // Need enough data for SMA50
+        if (history.Count < 50) return null;
 
         var rsi = history.GetRsi(14).LastOrDefault()?.Rsi ?? 0;
         var sma = history.GetSma(50).LastOrDefault()?.Sma ?? 0;
