@@ -31,25 +31,8 @@ builder.Services.AddCors(options =>
 });
 
 // Database
-var configuredConnection = builder.Configuration.GetConnectionString("CryptoAgentDb")
-    ?? throw new InvalidOperationException("Connection string 'CryptoAgentDb' is not configured.");
-
-// Ensure the SQLite file path is anchored to the content root so migrations and runtime
-// use the same database file instead of creating separate copies per working directory.
-const string dataSourcePrefix = "Data Source=";
-var resolvedConnection = configuredConnection;
-if (configuredConnection.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
-{
-    var dataSource = configuredConnection[dataSourcePrefix.Length..].Trim();
-    if (!Path.IsPathRooted(dataSource))
-    {
-        var absolutePath = Path.Combine(builder.Environment.ContentRootPath, dataSource);
-        resolvedConnection = $"{dataSourcePrefix}{absolutePath}";
-    }
-}
-
 builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
-    options.UseSqlite(resolvedConnection));
+    options.UseSqlite(builder.Configuration.GetConnectionString("CryptoAgentDb")));
 
 // Services
 builder.Services.AddScoped<PortfolioRepository>();
