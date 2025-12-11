@@ -31,6 +31,26 @@ builder.Services.AddCors(options =>
 });
 
 // Database
+var configuredConnection = builder.Configuration.GetConnectionString("CryptoAgentDb")
+    ?? throw new InvalidOperationException("Connection string 'CryptoAgentDb' is not configured.");
+
+// Anchor the SQLite file to the compiled output folder so both `dotnet ef` design-time
+// tools and the running application write to the exact same database file regardless of
+// the working directory used to launch the process.
+const string dataSourcePrefix = "Data Source=";
+var resolvedConnection = configuredConnection;
+if (configuredConnection.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
+{
+    var dataSource = configuredConnection[dataSourcePrefix.Length..].Trim();
+    if (!Path.IsPathRooted(dataSource))
+    {
+        var absolutePath = Path.Combine(AppContext.BaseDirectory, dataSource);
+        resolvedConnection = $"{dataSourcePrefix}{absolutePath}";
+    }
+}
+
+builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
+    options.UseSqlite(resolvedConnection));
 builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("CryptoAgentDb")));
 

@@ -1,16 +1,15 @@
 # Spec compliance status
 
 ## Overall completion
-Estimated completion: **70%**. Core models, endpoint scaffolding, and frontend panels align with the spec, but market data wiring and a few integration details remain incomplete or broken.
+Estimated completion: **85%**. SQLite persistence, repositories, exchange abstraction, and the background worker now align Phase 1 with the spec, though live exchange integration and some robustness gaps remain.
 
 ## Completed / present
-- Portfolio, market, trading, and config models include vault/high-watermark fields and DTO conversion helpers, matching the spec’s conceptual shapes.【F:backend/backend/Models.cs†L5-L172】
-- JSON-backed PortfolioStore and PerformanceStore exist with initialization, trade logging, and snapshot appending capabilities.【F:backend/backend/Services.cs†L9-L202】
-- RiskEngine applies trade limits, allocation checks, and processes buy/sell decisions; AgentService orchestrates market lookup, LLM call, risk gating, profit skimming, and performance snapshotting.【F:backend/backend/Services.cs†L204-L511】
-- Minimal API exposes dashboard, run-once, and monthly performance endpoints; CORS and Swagger are configured for local dev.【F:backend/backend/Program.cs†L6-L134】
-- Frontend types mirror backend DTOs, monthly performance UI is implemented, and the dashboard triggers agent runs and refreshes performance data.【F:frontend/src/types.ts†L1-L63】【F:frontend/src/components/MonthlyPerformance.tsx†L1-L47】【F:frontend/src/App.tsx†L1-L159】
+- SQLite-backed `CryptoAgentDbContext` with Portfolio, Trade, PerformanceSnapshot, and MarketSnapshot tables plus initial migration and EF Core DI wiring for the API and EF tooling.【F:backend/backend/Data/CryptoAgentDbContext.cs†L1-L114】【F:backend/backend/Migrations/20241008000000_InitialCreate.cs†L1-L107】【F:backend/backend/Program.cs†L14-L68】
+- Repositories replace JSON stores for portfolio, trades, and performance snapshots, including trade logging, daily counts, and snapshot append/read helpers.【F:backend/backend/Repositories/PortfolioRepository.cs†L1-L123】【F:backend/backend/Repositories/PerformanceRepository.cs†L1-L64】
+- Background `AgentWorker` records market snapshots on a schedule and can invoke the agent loop, while `PaperExchangeClient` executes paper trades with taker fees and balance updates via the database.【F:backend/backend/Services/AgentWorker.cs†L1-L71】【F:backend/backend/Services/PaperExchangeClient.cs†L1-L136】
+- Configurable fee and app settings plus `AgentMode` drive DI wiring between paper and (stub) live exchange clients, keeping the manual run-once API intact.【F:backend/backend/Program.cs†L21-L120】【F:backend/backend/Services/IExchangeClient.cs†L1-L36】【F:backend/backend/Services/CryptoComExchangeClient.cs†L1-L32】
 
 ## Missing / incomplete
-- MarketDataService contains malformed braces and uses a non-injected `HttpClientFactory` in `GetHistoricalDataAsync`, so CoinGecko integration and technical indicator inputs will not compile/run as-is.【F:backend/backend/Services.cs†L68-L177】
-- OpenAI chat client is registered, but API key/model depend solely on configuration; no guard rails for missing values are present, and agent prompts lack explicit fallback handling for malformed JSON beyond a simple catch-all HOLD.【F:backend/backend/Program.cs†L37-L44】【F:backend/backend/Services.cs†L444-L464】
-- Frontend API base URL is hardcoded to `http://localhost:5088` instead of relying on Vite proxy/env, which may break deployments outside that port configuration.【F:frontend/src/api.ts†L1-L24】
+- `CryptoComExchangeClient` remains a Phase 2 stub—live balance/trade calls, authentication, and fee handling are unimplemented.【F:backend/backend/Services/CryptoComExchangeClient.cs†L1-L32】
+- Market data fetching relies solely on CoinGecko without retries or resilience, and agent execution cadence is a simple counter in the worker; additional hardening and real exchange fail-safes are still needed for live mode.【F:backend/backend/Services/AgentWorker.cs†L16-L36】【F:backend/backend/Services.cs†L13-L108】
+- The frontend still assumes a fixed API base URL instead of using the Vite dev proxy, which may break non-default port setups.【F:frontend/src/api.ts†L1-L24】

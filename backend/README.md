@@ -29,3 +29,7 @@ dotnet tool restore
 ```
 
 After restoration, use `dotnet ef` from the same directory (or pass the `--tool-path` if you restore elsewhere) so the bundled .NET 8 runtime is used.
+
+### SQLite file location
+
+The connection string uses `Data Source=cryptoagent.db`. At startup we resolve that to an absolute path under the compiled output directory (`bin/<Configuration>/net8.0/cryptoagent.db`) so both the running API and `dotnet ef` design-time commands write to the same file no matter which folder you launch them from. If you created earlier databases in other folders, you can safely delete those stray copies after migrating.
