@@ -68,6 +68,13 @@ builder.Services.AddSingleton(sp =>
 
 var app = builder.Build();
 
+// Ensure database is created and up to date
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<CryptoAgentDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
