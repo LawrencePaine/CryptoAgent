@@ -67,6 +67,7 @@ public class Trade
     public RawActionType Action { get; set; }
     public decimal SizeGbp { get; set; }
     public decimal PriceGbp { get; set; }
+    public decimal FeeGbp { get; set; }
     public string Mode { get; set; } = "PAPER";
 }
 
@@ -129,6 +130,7 @@ public class PerformanceSnapshot
     public decimal VaultGbp { get; set; }
     public decimal NetDepositsGbp { get; set; }
     public decimal CumulatedAiCostGbp { get; set; }
+    public decimal CumulatedFeesGbp { get; set; }
 }
 
 // App-level config
@@ -146,6 +148,20 @@ public class AppConfig
 {
     public decimal EstimatedAiCostPerRunGbp { get; set; } = 0.02m;
     public decimal MonthlyAiFixedCostGbp { get; set; } = 0m;
+    public AgentMode Mode { get; set; } = AgentMode.Paper;
+}
+
+public class FeeConfig
+{
+    public decimal MakerPct { get; set; } = 0.0025m;
+    public decimal TakerPct { get; set; } = 0.0050m;
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum AgentMode
+{
+    Paper,
+    Live
 }
 
 public static class PortfolioExtensions
