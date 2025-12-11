@@ -9,31 +9,31 @@ export function MonthlyPerformanceSection({ data }: { data: MonthlyPerformance[]
                     <div key={`${m.year}-${m.month}`} className="bg-crypto-dark/30 p-4 rounded-xl border border-white/5 hover:bg-white/5 transition-colors">
                         <div className="flex justify-between items-center mb-3">
                             <div className="font-bold text-white text-lg">{m.year}-{m.month.toString().padStart(2, '0')}</div>
-                            <div className={`px-2 py-1 rounded text-xs font-bold ${m.netAfterAiGbp >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                {m.netAfterAiGbp >= 0 ? "PROFIT" : "LOSS"}
+                            <div className={`px-2 py-1 rounded text-xs font-bold ${(m.netAfterAiGbp ?? 0) >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                {(m.netAfterAiGbp ?? 0) >= 0 ? "PROFIT" : "LOSS"}
                             </div>
                         </div>
 
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between text-gray-400">
                                 <span>Start / End</span>
-                                <span className="font-mono text-gray-300">£{m.startValue.toFixed(0)} → £{m.endValue.toFixed(0)}</span>
+                                <span className="font-mono text-gray-300">£{(m.startValue ?? 0).toFixed(0)} → £{(m.endValue ?? 0).toFixed(0)}</span>
                             </div>
 
                             <div className="flex justify-between items-center pt-2 border-t border-white/5">
                                 <span className="text-gray-400">Gross P&L</span>
-                                <span className={`font-mono font-medium ${m.pnlGbp >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                    {m.pnlGbp >= 0 ? "+" : ""}£{m.pnlGbp.toFixed(2)}
+                                <span className={`font-mono font-medium ${(m.pnlGbp ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    {(m.pnlGbp ?? 0) >= 0 ? "+" : ""}£{(m.pnlGbp ?? 0).toFixed(2)}
                                 </span>
                             </div>
                             <div className="flex justify-between text-gray-500 text-xs">
                                 <span>AI Cost</span>
-                                <span>-£{m.aiCostGbp.toFixed(2)}</span>
+                                <span>-£{(m.aiCostGbp ?? 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between items-center pt-2 border-t border-white/5">
                                 <span className="text-gray-300 font-bold">Net Profit</span>
-                                <span className={`font-mono font-bold text-lg ${m.netAfterAiGbp >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                    {m.netAfterAiGbp >= 0 ? "+" : ""}£{m.netAfterAiGbp.toFixed(2)}
+                                <span className={`font-mono font-bold text-lg ${(m.netAfterAiGbp ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    {(m.netAfterAiGbp ?? 0) >= 0 ? "+" : ""}£{(m.netAfterAiGbp ?? 0).toFixed(2)}
                                 </span>
                             </div>
                         </div>

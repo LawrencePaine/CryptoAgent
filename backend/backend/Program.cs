@@ -58,10 +58,18 @@ builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
 // Services
 builder.Services.AddScoped<PortfolioRepository>();
 builder.Services.AddScoped<PerformanceRepository>();
-builder.Services.AddHttpClient("coingecko", client =>
+builder.Services.AddHttpClient("coingecko", (sp, client) =>
 {
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["CoinGecko:ApiKey"];
+
     client.BaseAddress = new Uri("https://api.coingecko.com");
     client.DefaultRequestHeaders.Add("User-Agent", "CryptoAgentPOC/1.0");
+
+    if (!string.IsNullOrEmpty(apiKey))
+    {
+        client.DefaultRequestHeaders.Add("x-cg-demo-api-key", apiKey);
+    }
 });
 builder.Services.AddSingleton<MarketDataService>();
 builder.Services.AddSingleton<RiskEngine>();

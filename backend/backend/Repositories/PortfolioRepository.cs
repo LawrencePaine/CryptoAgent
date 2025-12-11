@@ -87,7 +87,8 @@ public class PortfolioRepository
 
     public async Task<decimal> GetTotalFeesAsync()
     {
-        return await _dbContext.Trades.SumAsync(t => t.FeeGbp);
+        var fees = await _dbContext.Trades.Select(t => t.FeeGbp).ToListAsync();
+        return fees.Sum();
     }
 
     private static Portfolio MapToDomain(PortfolioEntity entity)

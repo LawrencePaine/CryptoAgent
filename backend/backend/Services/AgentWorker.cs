@@ -31,7 +31,7 @@ public class AgentWorker : BackgroundService
                 await agentService.RunOnceAsync();
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
         }
     }
 
