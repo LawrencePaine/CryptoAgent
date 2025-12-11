@@ -51,6 +51,8 @@ if (configuredConnection.StartsWith(dataSourcePrefix, StringComparison.OrdinalIg
 
 builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
     options.UseSqlite(resolvedConnection));
+builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("CryptoAgentDb")));
 
 // Services
 builder.Services.AddScoped<PortfolioRepository>();
