@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -37,20 +38,20 @@ var configuredConnection = builder.Configuration.GetConnectionString("CryptoAgen
 // Anchor the SQLite file to the compiled output folder so both `dotnet ef` design-time
 // tools and the running application write to the exact same database file regardless of
 // the working directory used to launch the process.
-const string dataSourcePrefix = "Data Source=";
-var resolvedConnection = configuredConnection;
-if (configuredConnection.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
-{
-    var dataSource = configuredConnection[dataSourcePrefix.Length..].Trim();
-    if (!Path.IsPathRooted(dataSource))
-    {
-        var absolutePath = Path.Combine(AppContext.BaseDirectory, dataSource);
-        resolvedConnection = $"{dataSourcePrefix}{absolutePath}";
-    }
-}
+//const string dataSourcePrefix = "Data Source=";
+//var resolvedConnection = configuredConnection;
+//if (configuredConnection.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
+//{
+//    var dataSource = configuredConnection[dataSourcePrefix.Length..].Trim();
+//    if (!Path.IsPathRooted(dataSource))
+//    {
+//        var absolutePath = Path.Combine(AppContext.BaseDirectory, dataSource);
+//        resolvedConnection = $"{dataSourcePrefix}{absolutePath}";
+//    }
+//}
 
-builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
-    options.UseSqlite(resolvedConnection));
+//builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
+//    options.UseSqlite(resolvedConnection));
 builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("CryptoAgentDb")));
 
@@ -107,80 +108,6 @@ app.UseCors();
 
 // Endpoints
 
-app.MapGet("/api/dashboard", async (PortfolioRepository portfolioRepository, MarketDataService marketDataService, AgentService agentService) =>
-{
-    var portfolio = await portfolioRepository.GetAsync();
-    var market = await marketDataService.GetSnapshotAsync();
-    var recentTrades = await portfolioRepository.GetRecentTradesAsync(20);
-
-    var response = new DashboardResponse
-    {
-        Portfolio = portfolio.ToDto(market),
-        Market = market,
-        LastDecision = agentService.LastDecision,
-        RecentTrades = recentTrades
-    };
-
-    return Results.Ok(response);
-})
-.WithName("GetDashboard");
-//.WithOpenApi();
-
-app.MapPost("/api/agent/run-once", async (AgentService agentService, PortfolioRepository portfolioRepository, MarketDataService marketDataService) =>
-{
-    await agentService.RunOnceAsync();
-
-    // Return updated dashboard
-    var portfolio = await portfolioRepository.GetAsync();
-    var market = await marketDataService.GetSnapshotAsync();
-    var recentTrades = await portfolioRepository.GetRecentTradesAsync(20);
-
-    var response = new DashboardResponse
-    {
-        Portfolio = portfolio.ToDto(market),
-        Market = market,
-        LastDecision = agentService.LastDecision,
-        RecentTrades = recentTrades
-    };
-
-    return Results.Ok(response);
-})
-.WithName("RunAgent");
-//.WithOpenApi();
-
-app.MapGet("/api/performance/monthly", async (PerformanceRepository performanceRepository) =>
-{
-    var all = await performanceRepository.GetAllAsync();
-
-    var groups = all.GroupBy(x => new { x.DateUtc.Year, x.DateUtc.Month })
-                    .OrderBy(g => g.Key.Year)
-                    .ThenBy(g => g.Key.Month)
-                    .Select(g =>
-                    {
-                        var first = g.First();
-                        var last = g.Last();
-                        var pnl = last.PortfolioValueGbp - first.PortfolioValueGbp;
-                        var aiCost = last.CumulatedAiCostGbp - first.CumulatedAiCostGbp;
-                        var fees = last.CumulatedFeesGbp - first.CumulatedFeesGbp;
-
-                        return new
-                        {
-                            Year = g.Key.Year,
-                            Month = g.Key.Month,
-                            StartValue = first.PortfolioValueGbp,
-                            EndValue = last.PortfolioValueGbp,
-                            PnlGbp = pnl,
-                            AiCostGbp = aiCost,
-                            FeesGbp = fees,
-                            NetAfterAiAndFeesGbp = pnl - aiCost - fees,
-                            VaultEndGbp = last.VaultGbp
-                        };
-                    })
-                    .ToList();
-
-    return Results.Ok(groups);
-})
-.WithName("GetMonthlyPerformance");
-//.WithOpenApi();
+app.MapControllers();
 
 app.Run();
