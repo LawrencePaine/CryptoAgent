@@ -58,6 +58,7 @@ builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
 // Services
 builder.Services.AddScoped<PortfolioRepository>();
 builder.Services.AddScoped<PerformanceRepository>();
+builder.Services.AddScoped<DecisionRepository>();
 builder.Services.AddHttpClient("coingecko", (sp, client) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();

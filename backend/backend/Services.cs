@@ -107,6 +107,7 @@ public class MarketDataService
                     Volume = candle.Count > 5 ? candle[5] : 0
                 });
             }
+            Console.WriteLine($"Fetched {quotes.Count} candles for {coinId}");
             return quotes;
         }
         catch (Exception ex)
@@ -141,7 +142,9 @@ public class RiskEngine
 
         if (suggestion.Action == RawActionType.Hold || suggestion.Asset == AssetType.None)
         {
-            decision.RiskReason = "LLM suggested HOLD or None";
+            decision.RiskReason = suggestion.RationaleShort.StartsWith("LLM Error") 
+                ? "LLM Failure" 
+                : "LLM suggested HOLD or None";
             return (decision, null);
         }
 
@@ -299,13 +302,14 @@ public class AgentService
         using var scope = _scopeFactory.CreateScope();
         var portfolioRepository = scope.ServiceProvider.GetRequiredService<PortfolioRepository>();
         var performanceRepository = scope.ServiceProvider.GetRequiredService<PerformanceRepository>();
+        var decisionRepository = scope.ServiceProvider.GetRequiredService<DecisionRepository>();
         var exchangeClient = scope.ServiceProvider.GetRequiredService<IExchangeClient>();
 
         var portfolio = await portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
 
-        var btcHistory = await _marketDataService.GetHistoricalDataAsync("bitcoin", 60);
-        var ethHistory = await _marketDataService.GetHistoricalDataAsync("ethereum", 60);
+        var btcHistory = await _marketDataService.GetHistoricalDataAsync("bitcoin", 100);
+        var ethHistory = await _marketDataService.GetHistoricalDataAsync("ethereum", 100);
 
         market.BtcTechnical = CalculateTechnical(btcHistory);
         market.EthTechnical = CalculateTechnical(ethHistory);
@@ -346,6 +350,25 @@ Rules:
    - MACD Histogram > 0 is Bullish Momentum.
 ";
 
+        if (market.BtcTechnical == null || market.EthTechnical == null)
+        {
+            var errorDecision = new LastDecision
+            {
+                TimestampUtc = DateTime.UtcNow,
+                LlmAction = RawActionType.Hold,
+                LlmAsset = AssetType.None,
+                FinalAction = RawActionType.Hold,
+                FinalAsset = AssetType.None,
+                Executed = false,
+                RationaleShort = "Market Data Error: Insufficient History",
+                RiskReason = "Technical Analysis Failed",
+                Mode = _appConfig.Mode.ToString().ToUpperInvariant()
+            };
+            LastDecision = errorDecision;
+            await decisionRepository.AddAsync(errorDecision);
+            return;
+        }
+
         var userPrompt = JsonSerializer.Serialize(state);
 
         LlmSuggestion suggestion;
@@ -363,14 +386,21 @@ Rules:
 
             suggestion = JsonSerializer.Deserialize<LlmSuggestion>(text) ?? new LlmSuggestion { Action = RawActionType.Hold };
         }
-        catch
+        catch (Exception ex)
         {
-            suggestion = new LlmSuggestion { Action = RawActionType.Hold, RationaleShort = "LLM Error" };
+            suggestion = new LlmSuggestion 
+            { 
+                Action = RawActionType.Hold, 
+                RationaleShort = $"LLM Error: {ex.Message}" 
+            };
+            Console.WriteLine($"LLM Exception: {ex}");
         }
 
         var (decision, trade) = _riskEngine.Apply(suggestion, portfolio, market, tradesToday, _riskConfig);
         decision.Mode = _appConfig.Mode.ToString().ToUpperInvariant();
         LastDecision = decision;
+
+        await decisionRepository.AddAsync(decision);
 
         if (decision.Executed && trade != null)
         {

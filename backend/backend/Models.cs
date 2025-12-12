@@ -121,6 +121,8 @@ public class DashboardResponse
     public MarketSnapshot Market { get; set; } = null!;
     public LastDecision? LastDecision { get; set; }
     public List<Trade> RecentTrades { get; set; } = new();
+    public List<LastDecision> RecentDecisions { get; set; } = new();
+    public string PositionCommentary { get; set; } = string.Empty;
 }
 
 public class PerformanceSnapshot

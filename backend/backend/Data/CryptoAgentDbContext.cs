@@ -13,6 +13,7 @@ public class CryptoAgentDbContext : DbContext
     public DbSet<TradeEntity> Trades => Set<TradeEntity>();
     public DbSet<PerformanceSnapshotEntity> PerformanceSnapshots => Set<PerformanceSnapshotEntity>();
     public DbSet<MarketSnapshotEntity> MarketSnapshots => Set<MarketSnapshotEntity>();
+    public DbSet<DecisionLogEntity> DecisionLogs => Set<DecisionLogEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,12 @@ public class CryptoAgentDbContext : DbContext
         modelBuilder.Entity<MarketSnapshotEntity>(entity =>
         {
             entity.ToTable("MarketSnapshots");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<DecisionLogEntity>(entity =>
+        {
+            entity.ToTable("DecisionLogs");
             entity.HasKey(e => e.Id);
         });
     }
@@ -86,9 +93,27 @@ public class MarketSnapshotEntity
     public int Id { get; set; }
     public DateTime TimestampUtc { get; set; }
     public decimal BtcPriceGbp { get; set; }
-    public decimal EthPriceGbp { get; set; }
     public decimal BtcChange24hPct { get; set; }
     public decimal EthChange24hPct { get; set; }
     public decimal BtcChange7dPct { get; set; }
+    public decimal EthPriceGbp { get; set; }
     public decimal EthChange7dPct { get; set; }
+}
+
+public class DecisionLogEntity
+{
+    public int Id { get; set; }
+    public DateTime TimestampUtc { get; set; }
+    public string LlmAction { get; set; } = string.Empty;
+    public string LlmAsset { get; set; } = string.Empty;
+    public decimal LlmSizeGbp { get; set; }
+    
+    public string FinalAction { get; set; } = string.Empty;
+    public string FinalAsset { get; set; } = string.Empty;
+    public decimal FinalSizeGbp { get; set; }
+    
+    public bool Executed { get; set; }
+    public string RationaleShort { get; set; } = string.Empty;
+    public string RiskReason { get; set; } = string.Empty;
+    public string Mode { get; set; } = "PAPER";
 }

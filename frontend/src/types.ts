@@ -49,6 +49,8 @@ export type DashboardResponse = {
   market: MarketSnapshot;
   lastDecision: LastDecision | null;
   recentTrades: Trade[];
+  recentDecisions: LastDecision[];
+  positionCommentary: string;
 };
 
 export type MonthlyPerformance = {

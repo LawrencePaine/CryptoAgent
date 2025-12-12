@@ -5,6 +5,7 @@ import { PortfolioCard } from "./components/PortfolioCard";
 import { MarketCard } from "./components/MarketCard";
 import { LastDecisionCard } from "./components/LastDecisionCard";
 import { RecentTradesTable } from "./components/RecentTradesTable";
+import { RecentDecisionsList } from "./components/RecentDecisionsList";
 import { MonthlyPerformanceSection } from "./components/MonthlyPerformance";
 
 function App() {
@@ -139,6 +140,24 @@ function App() {
               <PortfolioCard portfolio={dashboard.portfolio} />
               <MarketCard market={dashboard.market} />
               <LastDecisionCard decision={dashboard.lastDecision} />
+            </div>
+
+            {dashboard.positionCommentary && (
+              <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 p-6 rounded-2xl flex items-start gap-5 backdrop-blur-sm shadow-lg">
+                <div className="bg-indigo-500/20 p-3 rounded-xl text-indigo-300 shadow-inner">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-indigo-300 font-bold text-xs uppercase tracking-wider mb-2">Live Market Commentary</h3>
+                  <p className="text-indigo-50 text-lg leading-relaxed font-medium">{dashboard.positionCommentary}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1">
+              <RecentDecisionsList decisions={dashboard.recentDecisions || []} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
