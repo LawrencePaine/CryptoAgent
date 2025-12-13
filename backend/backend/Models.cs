@@ -77,6 +77,9 @@ public class LastDecision
     public RawActionType LlmAction { get; set; }
     public AssetType LlmAsset { get; set; }
     public decimal LlmSizeGbp { get; set; }
+    public decimal LlmConfidence { get; set; }
+    public string ProviderUsed { get; set; } = string.Empty;
+    public string RawModelOutput { get; set; } = string.Empty;
 
     public RawActionType FinalAction { get; set; }
     public AssetType FinalAsset { get; set; }

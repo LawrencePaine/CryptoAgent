@@ -1,6 +1,7 @@
 using CryptoAgent.Api.Data;
 using CryptoAgent.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace CryptoAgent.Api.Repositories;
 
@@ -21,6 +22,9 @@ public class DecisionRepository
             LlmAction = decision.LlmAction.ToString(),
             LlmAsset = decision.LlmAsset.ToString(),
             LlmSizeGbp = decision.LlmSizeGbp,
+            LlmConfidence = decision.LlmConfidence,
+            ProviderUsed = decision.ProviderUsed,
+            RawModelOutput = decision.RawModelOutput,
             FinalAction = decision.FinalAction.ToString(),
             FinalAsset = decision.FinalAsset.ToString(),
             FinalSizeGbp = decision.FinalSizeGbp,
@@ -35,7 +39,7 @@ public class DecisionRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<List<LastDecision>> GetRecentAsync(int count)
+    public async Task<List<LastDecision>> GetRecentDecisionsAsync(int count)
     {
         var entities = await _dbContext.DecisionLogs
             .OrderByDescending(d => d.TimestampUtc)
@@ -48,6 +52,9 @@ public class DecisionRepository
             LlmAction = Enum.Parse<RawActionType>(e.LlmAction),
             LlmAsset = Enum.Parse<AssetType>(e.LlmAsset),
             LlmSizeGbp = e.LlmSizeGbp,
+            LlmConfidence = e.LlmConfidence,
+            ProviderUsed = e.ProviderUsed,
+            RawModelOutput = e.RawModelOutput,
             FinalAction = Enum.Parse<RawActionType>(e.FinalAction),
             FinalAsset = Enum.Parse<AssetType>(e.FinalAsset),
             FinalSizeGbp = e.FinalSizeGbp,
@@ -58,4 +65,6 @@ public class DecisionRepository
             Mode = e.Mode
         }).ToList();
     }
+
+    public Task<List<LastDecision>> GetRecentAsync(int count) => GetRecentDecisionsAsync(count);
 }

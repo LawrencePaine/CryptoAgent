@@ -107,7 +107,10 @@ public class DecisionLogEntity
     public string LlmAction { get; set; } = string.Empty;
     public string LlmAsset { get; set; } = string.Empty;
     public decimal LlmSizeGbp { get; set; }
-    
+    public decimal LlmConfidence { get; set; }
+    public string ProviderUsed { get; set; } = string.Empty;
+    public string RawModelOutput { get; set; } = string.Empty;
+
     public string FinalAction { get; set; } = string.Empty;
     public string FinalAsset { get; set; } = string.Empty;
     public decimal FinalSizeGbp { get; set; }
