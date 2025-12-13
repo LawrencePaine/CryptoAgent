@@ -137,7 +137,8 @@ public class RiskEngine
             FinalAsset = AssetType.None,
             FinalSizeGbp = 0,
             Executed = false,
-            RationaleShort = suggestion.RationaleShort
+            RationaleShort = suggestion.RationaleShort,
+            RationaleDetailed = suggestion.RationaleDetailed
         };
 
         if (suggestion.Action == RawActionType.Hold || suggestion.Asset == AssetType.None)
@@ -308,8 +309,8 @@ public class AgentService
         var portfolio = await portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
 
-        var btcHistory = await _marketDataService.GetHistoricalDataAsync("bitcoin", 100);
-        var ethHistory = await _marketDataService.GetHistoricalDataAsync("ethereum", 100);
+        var btcHistory = await _marketDataService.GetHistoricalDataAsync("bitcoin", 365);
+        var ethHistory = await _marketDataService.GetHistoricalDataAsync("ethereum", 365);
 
         market.BtcTechnical = CalculateTechnical(btcHistory);
         market.EthTechnical = CalculateTechnical(ethHistory);
@@ -348,6 +349,10 @@ Rules:
    - RSI < 30 is Oversold (Buy signal).
    - Price > SMA50 is Bullish Trend.
    - MACD Histogram > 0 is Bullish Momentum.
+6. In 'RationaleDetailed', explain your reasoning step-by-step.
+   - Reference specific indicator values (e.g. 'RSI is 75', 'SMA50 is 95000').
+   - Explain why the combination involves a Buy/Sell/Hold.
+   - Mention market trends (24h/7d changes).
 ";
 
         if (market.BtcTechnical == null || market.EthTechnical == null)

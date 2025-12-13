@@ -26,6 +26,7 @@ public class DecisionRepository
             FinalSizeGbp = decision.FinalSizeGbp,
             Executed = decision.Executed,
             RationaleShort = decision.RationaleShort,
+            RationaleDetailed = decision.RationaleDetailed,
             RiskReason = decision.RiskReason,
             Mode = decision.Mode
         };
@@ -52,6 +53,7 @@ public class DecisionRepository
             FinalSizeGbp = e.FinalSizeGbp,
             Executed = e.Executed,
             RationaleShort = e.RationaleShort,
+            RationaleDetailed = e.RationaleDetailed,
             RiskReason = e.RiskReason,
             Mode = e.Mode
         }).ToList();

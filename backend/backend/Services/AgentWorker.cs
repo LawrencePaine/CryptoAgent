@@ -7,7 +7,6 @@ namespace CryptoAgent.Api.Services;
 public class AgentWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private int _tickCounter = 0;
 
     public AgentWorker(IServiceScopeFactory scopeFactory)
     {
@@ -26,25 +25,10 @@ public class AgentWorker : BackgroundService
             var snapshot = await marketDataService.GetSnapshotAsync();
             await SaveMarketSnapshotAsync(dbContext, snapshot, stoppingToken);
 
-            if (ShouldRunAgentNow())
-            {
-                await agentService.RunOnceAsync();
-            }
+            await agentService.RunOnceAsync();
 
             await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
         }
-    }
-
-    private bool ShouldRunAgentNow()
-    {
-        _tickCounter++;
-        if (_tickCounter >= 5)
-        {
-            _tickCounter = 0;
-            return true;
-        }
-
-        return false;
     }
 
     private static async Task SaveMarketSnapshotAsync(CryptoAgentDbContext dbContext, Models.MarketSnapshot snapshot, CancellationToken cancellationToken)

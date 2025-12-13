@@ -114,6 +114,7 @@ public class DecisionLogEntity
     
     public bool Executed { get; set; }
     public string RationaleShort { get; set; } = string.Empty;
+    public string RationaleDetailed { get; set; } = string.Empty;
     public string RiskReason { get; set; } = string.Empty;
     public string Mode { get; set; } = "PAPER";
 }

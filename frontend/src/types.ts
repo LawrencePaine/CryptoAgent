@@ -32,6 +32,7 @@ export type LastDecision = {
   executed: boolean;
   riskReason: string;
   rationaleShort: string;
+  rationaleDetailed: string;
   mode: "PAPER" | "LIVE";
 };
 
