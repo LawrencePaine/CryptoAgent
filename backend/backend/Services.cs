@@ -133,6 +133,7 @@ public class RiskEngine
             LlmAction = suggestion.Action,
             LlmAsset = suggestion.Asset,
             LlmSizeGbp = suggestion.SizeGbp,
+            LlmConfidence = suggestion.Confidence,
             FinalAction = RawActionType.Hold,
             FinalAsset = AssetType.None,
             FinalSizeGbp = 0,
@@ -305,6 +306,7 @@ public class AgentService
         var performanceRepository = scope.ServiceProvider.GetRequiredService<PerformanceRepository>();
         var decisionRepository = scope.ServiceProvider.GetRequiredService<DecisionRepository>();
         var exchangeClient = scope.ServiceProvider.GetRequiredService<IExchangeClient>();
+        var llmStateBuilder = scope.ServiceProvider.GetRequiredService<LlmStateBuilder>();
 
         var portfolio = await portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
@@ -315,68 +317,51 @@ public class AgentService
         market.BtcTechnical = CalculateTechnical(btcHistory);
         market.EthTechnical = CalculateTechnical(ethHistory);
 
-        var tradesToday = await portfolioRepository.CountTradesTodayAsync();
+        var llmState = await llmStateBuilder.BuildAsync(portfolio, market);
+        var tradesToday = llmState.Risk.TradesToday;
 
-        var dto = portfolio.ToDto(market);
-
-        var state = new
+        var stateJson = JsonSerializer.Serialize(llmState, new JsonSerializerOptions
         {
-            Portfolio = dto,
-            Market = market,
-            TradesToday = tradesToday,
-            RiskConfig = _riskConfig
-        };
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false
+        });
 
         var systemPrompt = @"You are a cautious crypto trading agent managing a paper portfolio.
-You only trade BTC and ETH in GBP.
-You MUST output strict JSON matching this schema:
+
+You trade ONLY BTC and ETH, sized in GBP. No leverage. No derivatives. No shorting.
+You MUST consider existing positions, allocations, cash remaining, fees, risk constraints, and recent trades/decisions before recommending any action.
+
+You will be given a JSON state object. Use ONLY values present in that state.
+Do NOT invent indicator values or portfolio amounts.
+If indicators are missing or null, do NOT use them; prefer HOLD.
+
+Output MUST be strict JSON only (no markdown, no extra text) matching exactly this schema:
 {
   ""Action"": ""Buy"" | ""Sell"" | ""Hold"",
   ""Asset"": ""Btc"" | ""Eth"" | ""None"",
   ""SizeGbp"": number,
-  ""Confidence"": number (0-1),
+  ""Confidence"": number,
   ""RationaleShort"": ""string"",
   ""RationaleDetailed"": ""string"",
   ""Notes"": ""string""
 }
+
 Rules:
-1. No leverage.
-2. Only Buy/Sell/Hold.
-3. Be conservative. Prefer Hold unless there is a clear opportunity.
-4. Do not hallucinate funds.
-5. Use Technical Analysis (RSI, SMA, MACD) to guide your decision.
-   - RSI > 70 is Overbought (Sell signal).
-   - RSI < 30 is Oversold (Buy signal).
-   - Price > SMA50 is Bullish Trend.
-   - MACD Histogram > 0 is Bullish Momentum.
-6. In 'RationaleDetailed', explain your reasoning step-by-step.
-   - Reference specific indicator values (e.g. 'RSI is 75', 'SMA50 is 95000').
-   - Explain why the combination involves a Buy/Sell/Hold.
-   - Mention market trends (24h/7d changes).
-";
+1) Prefer HOLD unless there is a clear, small, risk-compliant opportunity.
+2) Never recommend a trade exceeding MaxTradeSizeGbp or violating allocations/min cash.
+3) Avoid repeated buys in the same direction unless explicitly justified and within constraints.
+4) If TradesToday >= MaxTradesPerDay, output HOLD.
+5) RationaleShort must be one sentence.
+6) RationaleDetailed must be 3–6 short sentences referencing only provided values (portfolio, prices, changes, recent trades/decisions, indicators if present).";
 
-        if (market.BtcTechnical == null || market.EthTechnical == null)
-        {
-            var errorDecision = new LastDecision
-            {
-                TimestampUtc = DateTime.UtcNow,
-                LlmAction = RawActionType.Hold,
-                LlmAsset = AssetType.None,
-                FinalAction = RawActionType.Hold,
-                FinalAsset = AssetType.None,
-                Executed = false,
-                RationaleShort = "Market Data Error: Insufficient History",
-                RiskReason = "Technical Analysis Failed",
-                Mode = _appConfig.Mode.ToString().ToUpperInvariant()
-            };
-            LastDecision = errorDecision;
-            await decisionRepository.AddAsync(errorDecision);
-            return;
-        }
+        var userPrompt = $@"Use ONLY the JSON state below to decide Buy/Sell/Hold.
+Return exactly one JSON object matching the required schema, nothing else.
 
-        var userPrompt = JsonSerializer.Serialize(state);
+STATE_JSON:
+{stateJson}";
 
         LlmSuggestion suggestion;
+        string modelOutput = string.Empty;
         try
         {
             ChatCompletion completion = await _chatClient.CompleteChatAsync(
@@ -386,23 +371,40 @@ Rules:
                     new UserChatMessage(userPrompt)
                 });
 
-            var text = completion.Content[0].Text;
-            text = text.Replace("```json", "").Replace("```", "").Trim();
+            modelOutput = completion.Content[0].Text;
+            modelOutput = modelOutput.Replace("```json", "").Replace("```", "").Trim();
 
-            suggestion = JsonSerializer.Deserialize<LlmSuggestion>(text) ?? new LlmSuggestion { Action = RawActionType.Hold };
+            suggestion = JsonSerializer.Deserialize<LlmSuggestion>(modelOutput, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? BuildInvalidSuggestion();
+        }
+        catch (JsonException ex)
+        {
+            suggestion = BuildInvalidSuggestion(ex.Message);
         }
         catch (Exception ex)
         {
-            suggestion = new LlmSuggestion 
-            { 
-                Action = RawActionType.Hold, 
-                RationaleShort = $"LLM Error: {ex.Message}" 
+            suggestion = new LlmSuggestion
+            {
+                Action = RawActionType.Hold,
+                Asset = AssetType.None,
+                SizeGbp = 0,
+                Confidence = 0,
+                RationaleShort = $"LLM Error: {ex.Message}",
+                RationaleDetailed = string.Empty,
+                Notes = $"Exception: {ex.Message}"
             };
             Console.WriteLine($"LLM Exception: {ex}");
         }
 
+        suggestion ??= BuildInvalidSuggestion();
+
         var (decision, trade) = _riskEngine.Apply(suggestion, portfolio, market, tradesToday, _riskConfig);
         decision.Mode = _appConfig.Mode.ToString().ToUpperInvariant();
+        decision.ProviderUsed = "OpenAI";
+        decision.LlmConfidence = suggestion.Confidence;
+        decision.RawModelOutput = modelOutput;
         LastDecision = decision;
 
         await decisionRepository.AddAsync(decision);
@@ -418,7 +420,7 @@ Rules:
         }
 
         portfolio = await portfolioRepository.GetAsync();
-        dto = portfolio.ToDto(market);
+        var dto = portfolio.ToDto(market);
 
         if (portfolio.HighWatermarkGbp == 0)
         {
@@ -453,6 +455,32 @@ Rules:
             CumulatedFeesGbp = totalFees
         };
         await performanceRepository.AppendAsync(perf);
+
+        LlmSuggestion BuildInvalidSuggestion(string? error = null)
+        {
+            var reason = "Model output invalid; defaulting to HOLD.";
+            var notes = reason;
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                notes += $" Error: {error}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(modelOutput))
+            {
+                notes += $" Raw: {modelOutput}";
+            }
+
+            return new LlmSuggestion
+            {
+                Action = RawActionType.Hold,
+                Asset = AssetType.None,
+                SizeGbp = 0,
+                Confidence = 0,
+                RationaleShort = reason,
+                RationaleDetailed = string.Empty,
+                Notes = notes
+            };
+        }
     }
 
     private TechnicalAnalysis? CalculateTechnical(List<Quote> history)

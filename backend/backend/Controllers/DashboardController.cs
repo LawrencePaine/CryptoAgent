@@ -2,6 +2,7 @@ using CryptoAgent.Api.Models;
 using CryptoAgent.Api.Repositories;
 using CryptoAgent.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace CryptoAgent.Api.Controllers;
 
@@ -32,37 +33,60 @@ public class DashboardController : ControllerBase
         var portfolio = await _portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
         var recentTrades = await _portfolioRepository.GetRecentTradesAsync(20);
-        var recentDecisions = await _decisionRepository.GetRecentAsync(10);
+        var recentDecisions = await _decisionRepository.GetRecentDecisionsAsync(10);
+        var lastDecision = recentDecisions.FirstOrDefault() ?? _agentService.LastDecision;
         var dto = portfolio.ToDto(market);
 
         var response = new DashboardResponse
         {
             Portfolio = dto,
             Market = market,
-            LastDecision = _agentService.LastDecision,
+            LastDecision = lastDecision,
             RecentTrades = recentTrades,
             RecentDecisions = recentDecisions,
-            PositionCommentary = GenerateCommentary(dto)
+            PositionCommentary = GenerateCommentary(dto, lastDecision, recentTrades)
         };
 
         return Ok(response);
     }
-    private static string GenerateCommentary(PortfolioDto p)
+    private static string GenerateCommentary(PortfolioDto p, LastDecision? lastDecision, List<Trade> recentTrades)
     {
-        var topAsset = "Cash";
-        var topPct = p.CashAllocationPct;
+        var holdings =
+            $"Holdings: £{p.CashGbp:N2} cash, £{p.VaultGbp:N2} vault, £{p.BtcValueGbp:N2} BTC ({p.BtcAllocationPct:P0}), £{p.EthValueGbp:N2} ETH ({p.EthAllocationPct:P0}).";
 
-        if (p.BtcAllocationPct > topPct)
+        string decisionText;
+        if (lastDecision != null)
         {
-            topAsset = "BTC";
-            topPct = p.BtcAllocationPct;
+            var action = lastDecision.FinalAction.ToString().ToUpperInvariant();
+            var asset = lastDecision.FinalAsset.ToString().ToUpperInvariant();
+            var execution = lastDecision.Executed ? "executed" : "not executed";
+            decisionText =
+                $"Last decision: {action} £{lastDecision.FinalSizeGbp:N2} {asset} {execution}.";
+
+            if (!string.IsNullOrWhiteSpace(lastDecision.RationaleShort))
+            {
+                decisionText += $" Reason: {lastDecision.RationaleShort}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(lastDecision.RiskReason))
+            {
+                decisionText += $" (Risk: {lastDecision.RiskReason})";
+            }
         }
-        if (p.EthAllocationPct > topPct)
+        else
         {
-            topAsset = "ETH";
-            topPct = p.EthAllocationPct;
+            decisionText = "Last decision: none recorded.";
         }
 
-        return $"Portfolio is {(topPct * 100):F0}% {topAsset}. Total Value: £{p.TotalValueGbp:N2}.";
+        var tradeSnippets = recentTrades
+            .Take(3)
+            .Select(t => $"{t.Action.ToString().ToUpperInvariant()} £{t.SizeGbp:N2} {(t.Asset == AssetType.Btc ? "BTC" : "ETH")}")
+            .ToList();
+
+        var tradesText = tradeSnippets.Count > 0
+            ? $"Recent trades: {string.Join(", ", tradeSnippets)}."
+            : "Recent trades: none.";
+
+        return string.Join(" ", holdings, decisionText, tradesText);
     }
 }
