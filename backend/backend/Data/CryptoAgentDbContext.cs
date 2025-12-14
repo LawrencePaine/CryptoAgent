@@ -14,6 +14,10 @@ public class CryptoAgentDbContext : DbContext
     public DbSet<PerformanceSnapshotEntity> PerformanceSnapshots => Set<PerformanceSnapshotEntity>();
     public DbSet<MarketSnapshotEntity> MarketSnapshots => Set<MarketSnapshotEntity>();
     public DbSet<DecisionLogEntity> DecisionLogs => Set<DecisionLogEntity>();
+    public DbSet<Entities.HourlyCandleEntity> HourlyCandles => Set<Entities.HourlyCandleEntity>();
+    public DbSet<Entities.HourlyFeatureEntity> HourlyFeatures => Set<Entities.HourlyFeatureEntity>();
+    public DbSet<Entities.RegimeStateEntity> RegimeStates => Set<Entities.RegimeStateEntity>();
+    public DbSet<Entities.StrategySignalEntity> StrategySignals => Set<Entities.StrategySignalEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +55,41 @@ public class CryptoAgentDbContext : DbContext
         {
             entity.ToTable("DecisionLogs");
             entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Entities.HourlyCandleEntity>(entity =>
+        {
+            entity.ToTable("HourlyCandles");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Asset, e.HourUtc }).IsUnique();
+            entity.Property(e => e.Asset).IsRequired();
+            entity.Property(e => e.Source).HasDefaultValue("CoinGecko");
+        });
+
+        modelBuilder.Entity<Entities.HourlyFeatureEntity>(entity =>
+        {
+            entity.ToTable("HourlyFeatures");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Asset, e.HourUtc }).IsUnique();
+            entity.Property(e => e.Asset).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.RegimeStateEntity>(entity =>
+        {
+            entity.ToTable("RegimeStates");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Asset, e.HourUtc }).IsUnique();
+            entity.Property(e => e.Asset).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.StrategySignalEntity>(entity =>
+        {
+            entity.ToTable("StrategySignals");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Asset, e.HourUtc });
+            entity.HasIndex(e => new { e.StrategyName, e.HourUtc });
+            entity.Property(e => e.Asset).IsRequired();
+            entity.Property(e => e.StrategyName).IsRequired();
         });
     }
 }

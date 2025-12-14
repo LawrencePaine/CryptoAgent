@@ -83,6 +83,174 @@ namespace backend.Migrations
                     b.ToTable("DecisionLogs", (string)null);
                 });
 
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.HourlyCandleEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CloseGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("HighGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("LowGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OpenGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("CoinGecko");
+
+                    b.Property<decimal?>("Volume")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Asset", "HourUtc")
+                        .IsUnique();
+
+                    b.ToTable("HourlyCandles", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.HourlyFeatureEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Drawdown7d")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsComplete")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MomentumScore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Return1h")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Return24h")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Return7d")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Sma168")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Sma24")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TrendStrength")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Vol24h")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Vol72h")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Asset", "HourUtc")
+                        .IsUnique();
+
+                    b.ToTable("HourlyFeatures", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.RegimeStateEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Confidence")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Regime")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Asset", "HourUtc")
+                        .IsUnique();
+
+                    b.ToTable("RegimeStates", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.StrategySignalEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SignalScore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StrategyName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuggestedAction")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SuggestedSizeGbp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Asset", "HourUtc");
+
+                    b.HasIndex("StrategyName", "HourUtc");
+
+                    b.ToTable("StrategySignals", (string)null);
+                });
+
             modelBuilder.Entity("CryptoAgent.Api.Data.MarketSnapshotEntity", b =>
                 {
                     b.Property<int>("Id")
