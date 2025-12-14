@@ -116,6 +116,60 @@ public class MarketDataService
             return new List<Quote>();
         }
     }
+
+    public async Task<List<HourlyCandle>> GetHourlyCandlesAsync(string asset, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient("coingecko");
+        var id = asset.ToUpperInvariant() == "BTC" ? "bitcoin" : "ethereum";
+        var fromUnix = new DateTimeOffset(fromUtc).ToUnixTimeSeconds();
+        var toUnix = new DateTimeOffset(toUtc).ToUnixTimeSeconds();
+
+        try
+        {
+            var response = await client.GetFromJsonAsync<JsonElement>($"/api/v3/coins/{id}/market_chart/range?vs_currency=gbp&from={fromUnix}&to={toUnix}", ct);
+            var candles = new Dictionary<DateTime, List<decimal>>();
+
+            if (response.TryGetProperty("prices", out var prices) && prices.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var priceEntry in prices.EnumerateArray())
+                {
+                    if (priceEntry.GetArrayLength() < 2) continue;
+                    var ts = DateTimeOffset.FromUnixTimeMilliseconds(priceEntry[0].GetInt64()).UtcDateTime;
+                    var hour = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, 0, 0, DateTimeKind.Utc);
+                    var price = priceEntry[1].GetDecimal();
+
+                    if (!candles.ContainsKey(hour)) candles[hour] = new List<decimal>();
+                    candles[hour].Add(price);
+                }
+            }
+
+            var result = new List<HourlyCandle>();
+            foreach (var kvp in candles.OrderBy(c => c.Key))
+            {
+                var pricesForHour = kvp.Value;
+                if (pricesForHour.Count == 0) continue;
+
+                result.Add(new HourlyCandle
+                {
+                    Asset = asset,
+                    HourUtc = kvp.Key,
+                    OpenGbp = pricesForHour.First(),
+                    CloseGbp = pricesForHour.Last(),
+                    HighGbp = pricesForHour.Max(),
+                    LowGbp = pricesForHour.Min(),
+                    Volume = null,
+                    Source = "CoinGecko"
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching hourly candles for {asset}: {ex.Message}");
+            return new List<HourlyCandle>();
+        }
+    }
 }
 
 public class RiskEngine

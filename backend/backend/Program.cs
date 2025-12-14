@@ -15,10 +15,14 @@ builder.Services.AddSwaggerGen();
 var riskConfig = builder.Configuration.GetSection("RiskConfig").Get<RiskConfig>() ?? new RiskConfig();
 var appConfig = builder.Configuration.GetSection("AppConfig").Get<AppConfig>() ?? new AppConfig();
 var feeConfig = builder.Configuration.GetSection("FeeConfig").Get<FeeConfig>() ?? new FeeConfig();
+var regimeConfig = builder.Configuration.GetSection("RegimeConfig").Get<RegimeConfig>() ?? new RegimeConfig();
+var workerConfig = builder.Configuration.GetSection("Worker").Get<WorkerConfig>() ?? new WorkerConfig();
 
 builder.Services.AddSingleton(riskConfig);
 builder.Services.AddSingleton(appConfig);
 builder.Services.AddSingleton(feeConfig);
+builder.Services.AddSingleton(regimeConfig);
+builder.Services.AddSingleton(workerConfig);
 
 // CORS
 builder.Services.AddCors(options =>
@@ -59,6 +63,10 @@ builder.Services.AddDbContext<CryptoAgentDbContext>(options =>
 builder.Services.AddScoped<PortfolioRepository>();
 builder.Services.AddScoped<PerformanceRepository>();
 builder.Services.AddScoped<DecisionRepository>();
+builder.Services.AddScoped<HourlyCandleRepository>();
+builder.Services.AddScoped<HourlyFeatureRepository>();
+builder.Services.AddScoped<RegimeStateRepository>();
+builder.Services.AddScoped<StrategySignalRepository>();
 builder.Services.AddScoped<LlmStateBuilder>();
 builder.Services.AddHttpClient("coingecko", (sp, client) =>
 {
@@ -76,6 +84,11 @@ builder.Services.AddHttpClient("coingecko", (sp, client) =>
 builder.Services.AddSingleton<MarketDataService>();
 builder.Services.AddSingleton<RiskEngine>();
 builder.Services.AddSingleton<AgentService>();
+builder.Services.AddSingleton<HourlyFeatureCalculator>();
+builder.Services.AddSingleton<RegimeClassifier>();
+builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.DcaAccumulateStrategy>();
+builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.MeanReversionStrategy>();
+builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.RiskOffTrimStrategy>();
 
 if (appConfig.Mode == AgentMode.Paper)
 {
