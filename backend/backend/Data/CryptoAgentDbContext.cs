@@ -1,4 +1,5 @@
 using CryptoAgent.Api.Models;
+using CryptoAgent.Api.Backtesting.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace CryptoAgent.Api.Data;
@@ -18,6 +19,10 @@ public class CryptoAgentDbContext : DbContext
     public DbSet<Entities.HourlyFeatureEntity> HourlyFeatures => Set<Entities.HourlyFeatureEntity>();
     public DbSet<Entities.RegimeStateEntity> RegimeStates => Set<Entities.RegimeStateEntity>();
     public DbSet<Entities.StrategySignalEntity> StrategySignals => Set<Entities.StrategySignalEntity>();
+    public DbSet<BacktestRunEntity> BacktestRuns => Set<BacktestRunEntity>();
+    public DbSet<BacktestStepEntity> BacktestSteps => Set<BacktestStepEntity>();
+    public DbSet<BacktestTradeEntity> BacktestTrades => Set<BacktestTradeEntity>();
+    public DbSet<BacktestMetricEntity> BacktestMetrics => Set<BacktestMetricEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,6 +95,37 @@ public class CryptoAgentDbContext : DbContext
             entity.HasIndex(e => new { e.StrategyName, e.HourUtc });
             entity.Property(e => e.Asset).IsRequired();
             entity.Property(e => e.StrategyName).IsRequired();
+        });
+
+        modelBuilder.Entity<BacktestRunEntity>(entity =>
+        {
+            entity.ToTable("BacktestRuns");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Mode).HasDefaultValue("PAPER");
+            entity.Property(e => e.DecisionCadenceHours).HasDefaultValue(1);
+            entity.Property(e => e.WarmupHours).HasDefaultValue(168);
+            entity.Property(e => e.SelectorMode).HasDefaultValue("Deterministic");
+        });
+
+        modelBuilder.Entity<BacktestStepEntity>(entity =>
+        {
+            entity.ToTable("BacktestSteps");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.BacktestRunId, e.HourUtc }).IsUnique();
+        });
+
+        modelBuilder.Entity<BacktestTradeEntity>(entity =>
+        {
+            entity.ToTable("BacktestTrades");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.BacktestRunId);
+        });
+
+        modelBuilder.Entity<BacktestMetricEntity>(entity =>
+        {
+            entity.ToTable("BacktestMetrics");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.BacktestRunId).IsUnique();
         });
     }
 }

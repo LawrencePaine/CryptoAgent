@@ -251,6 +251,241 @@ namespace backend.Migrations
                     b.ToTable("StrategySignals", (string)null);
                 });
 
+            modelBuilder.Entity("CryptoAgent.Api.Backtesting.Entities.BacktestMetricEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AvgTradePnlGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Baseline_Dca_FinalValueGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Baseline_Hodl_FinalValueGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Baseline_Rebalance_FinalValueGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BacktestRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("FeesPaidGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FinalValueGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaxDrawdownPct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("NetProfitGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("NetProfitPct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SharpeLike")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SlippagePaidGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TradeCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("WinRatePct")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacktestRunId")
+                        .IsUnique();
+
+                    b.ToTable("BacktestMetrics", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Backtesting.Entities.BacktestRunEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DecisionCadenceHours")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime>("EndHourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FeePct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("InitialCashGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaxBtcAllocationPct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaxEthAllocationPct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaxTradeSizeGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxTradesPerDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("PAPER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SelectorMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Deterministic");
+
+                    b.Property<DateTime>("StartHourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MinCashAllocationPct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SlippagePct")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WarmupHours")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(168);
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BacktestRuns", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Backtesting.Entities.BacktestStepEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BacktestRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("BtcAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BtcCloseGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BtcRegime")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CashGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EthAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EthCloseGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EthRegime")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Executed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RiskReason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SizeGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalValueGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("VaultGbp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacktestRunId", "HourUtc")
+                        .IsUnique();
+
+                    b.ToTable("BacktestSteps", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Backtesting.Entities.BacktestTradeEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BacktestRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("FeeGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HourUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("PriceGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SizeGbp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SlippageGbp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacktestRunId");
+
+                    b.ToTable("BacktestTrades", (string)null);
+                });
+
             modelBuilder.Entity("CryptoAgent.Api.Data.MarketSnapshotEntity", b =>
                 {
                     b.Property<int>("Id")
