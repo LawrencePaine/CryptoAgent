@@ -3,6 +3,9 @@ using CryptoAgent.Api.Models;
 using CryptoAgent.Api.Repositories;
 using CryptoAgent.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Hosting.Server;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,12 +14,24 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: @"C:\CryptoAgentData\logs\cryptoagent-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        shared: true)
+    .CreateLogger();
+
 // Config
 var riskConfig = builder.Configuration.GetSection("RiskConfig").Get<RiskConfig>() ?? new RiskConfig();
 var appConfig = builder.Configuration.GetSection("AppConfig").Get<AppConfig>() ?? new AppConfig();
 var feeConfig = builder.Configuration.GetSection("FeeConfig").Get<FeeConfig>() ?? new FeeConfig();
 var regimeConfig = builder.Configuration.GetSection("RegimeConfig").Get<RegimeConfig>() ?? new RegimeConfig();
 var workerConfig = builder.Configuration.GetSection("Worker").Get<WorkerConfig>() ?? new WorkerConfig();
+
+builder.Host.UseSerilog();
 
 builder.Services.AddSingleton(riskConfig);
 builder.Services.AddSingleton(appConfig);
@@ -132,5 +147,19 @@ app.UseCors();
 // Endpoints
 
 app.MapControllers();
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var server = app.Services.GetRequiredService<IServer>();
+    var addressFeature = server.Features.Get<IServerAddressesFeature>();
 
+    if (addressFeature != null)
+    {
+        foreach (var address in addressFeature.Addresses)
+        {
+            Log.Information("CryptoAgent running on: {Address}", address);
+        }
+    }
+});
+
+Log.Information("CryptoAgent starting up...");
 app.Run();
