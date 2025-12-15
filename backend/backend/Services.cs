@@ -4,6 +4,7 @@ using System.Text.Json;
 using CryptoAgent.Api.Models;
 using CryptoAgent.Api.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using OpenAI.Chat;
 using Skender.Stock.Indicators;
 
@@ -201,24 +202,42 @@ public class RiskEngine
             decision.RiskReason = suggestion.RationaleShort.StartsWith("LLM Error") 
                 ? "LLM Failure" 
                 : "LLM suggested HOLD or None";
+
+            Log.Information(
+                "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                decision.RiskReason,
+                suggestion.Confidence);
+
             return (decision, null);
         }
 
         if (tradesToday >= config.MaxTradesPerDay)
         {
             decision.RiskReason = "Max trades per day reached";
+            Log.Information(
+                "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                decision.RiskReason,
+                suggestion.Confidence);
             return (decision, null);
         }
 
         if (suggestion.SizeGbp <= 0)
         {
             decision.RiskReason = "Trade size <= 0";
+            Log.Information(
+                "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                decision.RiskReason,
+                suggestion.Confidence);
             return (decision, null);
         }
 
         if (suggestion.SizeGbp > config.MaxTradeSizeGbp)
         {
             decision.RiskReason = "Trade size exceeds maximum allowed";
+            Log.Information(
+                "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                decision.RiskReason,
+                suggestion.Confidence);
             return (decision, null);
         }
 
@@ -226,6 +245,10 @@ public class RiskEngine
         if (price <= 0)
         {
             decision.RiskReason = "Invalid price";
+            Log.Information(
+                "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                decision.RiskReason,
+                suggestion.Confidence);
             return (decision, null);
         }
 
@@ -234,6 +257,10 @@ public class RiskEngine
             if (portfolio.CashGbp < suggestion.SizeGbp)
             {
                 decision.RiskReason = "Insufficient cash";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
 
@@ -241,6 +268,10 @@ public class RiskEngine
             if (change7d > config.MaxBuyAfter7dRallyPct)
             {
                 decision.RiskReason = $"7d change {change7d:P1} exceeds limit {config.MaxBuyAfter7dRallyPct:P1}";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
 
@@ -256,16 +287,28 @@ public class RiskEngine
             if (newBtcVal / newTotal > config.MaxBtcAllocationPct)
             {
                 decision.RiskReason = "Would breach Max BTC Allocation";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
             if (newEthVal / newTotal > config.MaxEthAllocationPct)
             {
                 decision.RiskReason = "Would breach Max ETH Allocation";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
             if ((newCash + portfolio.VaultGbp) / newTotal < config.MinCashAllocationPct)
             {
                 decision.RiskReason = "Would breach Min Cash Allocation";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
 
@@ -301,6 +344,10 @@ public class RiskEngine
             if (adjustedSizeGbp < 0.01m)
             {
                 decision.RiskReason = "Sell size too small";
+                Log.Information(
+                    "Decision HOLD. Reason={Reason}. BestSignalScore={Score}",
+                    decision.RiskReason,
+                    suggestion.Confidence);
                 return (decision, null);
             }
 
@@ -373,6 +420,11 @@ public class AgentService
 
         var llmState = await llmStateBuilder.BuildAsync(portfolio, market);
         var tradesToday = llmState.Risk.TradesToday;
+
+        Log.Information(
+            "Hourly decision tick at {HourUtc}. TradesToday={TradesToday}",
+            llmState.TimestampUtc,
+            tradesToday);
 
         var stateJson = JsonSerializer.Serialize(llmState, new JsonSerializerOptions
         {
