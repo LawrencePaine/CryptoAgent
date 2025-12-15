@@ -21,21 +21,24 @@ public class HourlyFeatureCalculator
         {
             Asset = asset,
             HourUtc = latest.HourUtc,
-            Return1h = SafeReturn(close, prevClose),
-            IsComplete = true
+            Return1h = SafeReturn(close, prevClose)
         };
 
-        feature.Return24h = CalculateReturn(ordered, 24, latestIndex, ref feature.IsComplete, close);
-        feature.Return7d = CalculateReturn(ordered, 168, latestIndex, ref feature.IsComplete, close);
+        bool isComplete = true;
 
-        feature.Sma24 = CalculateSma(ordered, 24, latestIndex, ref feature.IsComplete);
-        feature.Sma168 = CalculateSma(ordered, 168, latestIndex, ref feature.IsComplete);
+        feature.Return24h = CalculateReturn(ordered, 24, latestIndex, ref isComplete, close);
+        feature.Return7d = CalculateReturn(ordered, 168, latestIndex, ref isComplete, close);
 
-        feature.Vol24h = CalculateVol(ordered, 24, latestIndex, ref feature.IsComplete);
-        feature.Vol72h = CalculateVol(ordered, 72, latestIndex, ref feature.IsComplete);
+        feature.Sma24 = CalculateSma(ordered, 24, latestIndex, ref isComplete);
+        feature.Sma168 = CalculateSma(ordered, 168, latestIndex, ref isComplete);
+
+        feature.Vol24h = CalculateVol(ordered, 24, latestIndex, ref isComplete);
+        feature.Vol72h = CalculateVol(ordered, 72, latestIndex, ref isComplete);
 
         feature.TrendStrength = feature.Sma168 == 0 ? 0 : (feature.Sma24 / feature.Sma168) - 1;
-        feature.Drawdown7d = CalculateDrawdown(ordered, 168, latestIndex, close, ref feature.IsComplete);
+        feature.Drawdown7d = CalculateDrawdown(ordered, 168, latestIndex, close, ref isComplete);
+
+        feature.IsComplete = isComplete;
 
         var momentum = 0.5m * feature.Return24h + 0.5m * feature.TrendStrength;
         feature.MomentumScore = Clamp(momentum * 10, -1, 1);
