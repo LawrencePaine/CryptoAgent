@@ -14,6 +14,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure hosting URL/port
+var configuredUrls = builder.Configuration.GetSection("Urls").Get<string[]>();
+var portOverride = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrWhiteSpace(portOverride) && int.TryParse(portOverride, out var parsedPort))
+{
+    builder.WebHost.UseUrls($"http://*:{parsedPort}");
+}
+else if (configuredUrls is { Length: > 0 })
+{
+    builder.WebHost.UseUrls(configuredUrls);
+}
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
