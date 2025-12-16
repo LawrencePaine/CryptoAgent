@@ -135,6 +135,10 @@ builder.Services.AddSingleton(sp =>
     var config = sp.GetRequiredService<IConfiguration>();
     var apiKey = config["OpenAI:ApiKey"];
     var model = config["OpenAI:Model"] ?? "gpt-4o";
+    if (string.IsNullOrWhiteSpace(apiKey))
+    {
+        throw new InvalidOperationException("OpenAI:ApiKey is not configured.");
+    }
     return new OpenAI.Chat.ChatClient(model, new System.ClientModel.ApiKeyCredential(apiKey));
 });
 
