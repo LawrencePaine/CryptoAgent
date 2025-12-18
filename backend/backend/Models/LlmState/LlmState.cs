@@ -24,14 +24,21 @@ public class LlmPortfolioState
     public decimal VaultGbp { get; set; }
     public decimal BtcAmount { get; set; }
     public decimal EthAmount { get; set; }
+    public decimal BtcCostBasisGbp { get; set; }
+    public decimal EthCostBasisGbp { get; set; }
 
     public decimal BtcValueGbp { get; set; }
     public decimal EthValueGbp { get; set; }
     public decimal TotalValueGbp { get; set; }
+    public decimal BtcUnrealisedPnlGbp { get; set; }
+    public decimal EthUnrealisedPnlGbp { get; set; }
+    public decimal BtcUnrealisedPnlPct { get; set; }
+    public decimal EthUnrealisedPnlPct { get; set; }
 
     public decimal BtcAllocationPct { get; set; }
     public decimal EthAllocationPct { get; set; }
     public decimal CashAllocationPct { get; set; }
+    public decimal VaultAllocationPct { get; set; }
 }
 
 public class LlmMarketState
@@ -62,6 +69,7 @@ public class LlmRecentTrade
     public DateTime TimestampUtc { get; set; }
     public string Asset { get; set; } = "";   // "BTC" | "ETH"
     public string Action { get; set; } = "";  // "BUY" | "SELL"
+    public decimal AssetAmount { get; set; }
     public decimal SizeGbp { get; set; }
     public decimal PriceGbp { get; set; }
     public decimal FeeGbp { get; set; }

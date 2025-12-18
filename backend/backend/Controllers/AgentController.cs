@@ -14,17 +14,20 @@ public class AgentController : ControllerBase
     private readonly PortfolioRepository _portfolioRepository;
     private readonly MarketDataService _marketDataService;
     private readonly DecisionRepository _decisionRepository;
+    private readonly PortfolioValuationService _valuationService;
 
     public AgentController(
         AgentService agentService,
         PortfolioRepository portfolioRepository,
         MarketDataService marketDataService,
-        DecisionRepository decisionRepository)
+        DecisionRepository decisionRepository,
+        PortfolioValuationService valuationService)
     {
         _agentService = agentService;
         _portfolioRepository = portfolioRepository;
         _marketDataService = marketDataService;
         _decisionRepository = decisionRepository;
+        _valuationService = valuationService;
     }
 
     [HttpPost("run-once")]
@@ -38,7 +41,8 @@ public class AgentController : ControllerBase
         var recentTrades = await _portfolioRepository.GetRecentTradesAsync(20);
         var recentDecisions = await _decisionRepository.GetRecentDecisionsAsync(10);
         var lastDecision = recentDecisions.FirstOrDefault() ?? _agentService.LastDecision;
-        var dto = portfolio.ToDto(market);
+        var valuation = _valuationService.Calculate(portfolio, market);
+        var dto = portfolio.ToDto(valuation);
 
         var response = new DashboardResponse
         {
@@ -56,7 +60,10 @@ public class AgentController : ControllerBase
     private static string GenerateCommentary(PortfolioDto p, LastDecision? lastDecision, List<Trade> recentTrades)
     {
         var holdings =
-            $"Holdings: £{p.CashGbp:N2} cash, £{p.VaultGbp:N2} vault, £{p.BtcValueGbp:N2} BTC ({p.BtcAllocationPct:P0}), £{p.EthValueGbp:N2} ETH ({p.EthAllocationPct:P0}).";
+            $"Holdings: £{p.CashGbp:N2} cash, £{p.VaultGbp:N2} vault, £{p.Btc.CurrentValueGbp:N2} BTC ({p.Btc.AllocationPct:P0}), £{p.Eth.CurrentValueGbp:N2} ETH ({p.Eth.AllocationPct:P0}).";
+
+        var pnlText =
+            $"BTC uPnL: {p.Btc.UnrealisedPnlGbp:+£0.00;-£0.00;+£0.00} ({p.Btc.UnrealisedPnlPct:P1}), ETH uPnL: {p.Eth.UnrealisedPnlGbp:+£0.00;-£0.00;+£0.00} ({p.Eth.UnrealisedPnlPct:P1}).";
 
         string decisionText;
         if (lastDecision != null)
@@ -91,6 +98,6 @@ public class AgentController : ControllerBase
             ? $"Recent trades: {string.Join(", ", tradeSnippets)}."
             : "Recent trades: none.";
 
-        return string.Join(" ", holdings, decisionText, tradesText);
+        return string.Join(" ", holdings, pnlText, decisionText, tradesText);
     }
 }

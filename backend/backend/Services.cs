@@ -175,9 +175,17 @@ public class MarketDataService
 
 public class RiskEngine
 {
+    private readonly PortfolioValuationService _valuationService;
+
+    public RiskEngine(PortfolioValuationService valuationService)
+    {
+        _valuationService = valuationService;
+    }
+
     public (LastDecision decision, Trade? trade) Apply(
         LlmSuggestion suggestion,
         Portfolio portfolio,
+        PortfolioValuation valuation,
         MarketSnapshot market,
         int tradesToday,
         RiskConfig config)
@@ -276,15 +284,20 @@ public class RiskEngine
             }
 
             var amountToBuy = suggestion.SizeGbp / price;
-            var newBtc = portfolio.BtcAmount + (suggestion.Asset == AssetType.Btc ? amountToBuy : 0);
-            var newEth = portfolio.EthAmount + (suggestion.Asset == AssetType.Eth ? amountToBuy : 0);
-            var newCash = portfolio.CashGbp - suggestion.SizeGbp;
+            var projectedPortfolio = new Portfolio
+            {
+                CashGbp = portfolio.CashGbp - suggestion.SizeGbp,
+                BtcAmount = portfolio.BtcAmount + (suggestion.Asset == AssetType.Btc ? amountToBuy : 0),
+                EthAmount = portfolio.EthAmount + (suggestion.Asset == AssetType.Eth ? amountToBuy : 0),
+                VaultGbp = portfolio.VaultGbp,
+                HighWatermarkGbp = portfolio.HighWatermarkGbp,
+                BtcCostBasisGbp = portfolio.BtcCostBasisGbp,
+                EthCostBasisGbp = portfolio.EthCostBasisGbp
+            };
 
-            var newBtcVal = newBtc * market.BtcPriceGbp;
-            var newEthVal = newEth * market.EthPriceGbp;
-            var newTotal = newCash + portfolio.VaultGbp + newBtcVal + newEthVal;
+            var projectedValuation = _valuationService.Calculate(projectedPortfolio, market);
 
-            if (newBtcVal / newTotal > config.MaxBtcAllocationPct)
+            if (projectedValuation.BtcAllocationPct > config.MaxBtcAllocationPct)
             {
                 decision.RiskReason = "Would breach Max BTC Allocation";
                 Log.Information(
@@ -293,7 +306,7 @@ public class RiskEngine
                     suggestion.Confidence);
                 return (decision, null);
             }
-            if (newEthVal / newTotal > config.MaxEthAllocationPct)
+            if (projectedValuation.EthAllocationPct > config.MaxEthAllocationPct)
             {
                 decision.RiskReason = "Would breach Max ETH Allocation";
                 Log.Information(
@@ -302,7 +315,8 @@ public class RiskEngine
                     suggestion.Confidence);
                 return (decision, null);
             }
-            if ((newCash + portfolio.VaultGbp) / newTotal < config.MinCashAllocationPct)
+            var projectedCashLike = projectedPortfolio.CashGbp + projectedPortfolio.VaultGbp;
+            if (projectedValuation.TotalValueGbp > 0 && projectedCashLike / projectedValuation.TotalValueGbp < config.MinCashAllocationPct)
             {
                 decision.RiskReason = "Would breach Min Cash Allocation";
                 Log.Information(
@@ -381,6 +395,7 @@ public class AgentService
     private readonly ChatClient _chatClient;
     private readonly RiskConfig _riskConfig;
     private readonly AppConfig _appConfig;
+    private readonly PortfolioValuationService _valuationService;
 
     public LastDecision? LastDecision { get; private set; }
 
@@ -390,7 +405,8 @@ public class AgentService
         RiskEngine riskEngine,
         ChatClient chatClient,
         RiskConfig riskConfig,
-        AppConfig appConfig)
+        AppConfig appConfig,
+        PortfolioValuationService valuationService)
     {
         _scopeFactory = scopeFactory;
         _marketDataService = marketDataService;
@@ -398,6 +414,7 @@ public class AgentService
         _chatClient = chatClient;
         _riskConfig = riskConfig;
         _appConfig = appConfig;
+        _valuationService = valuationService;
     }
 
     public async Task RunOnceAsync()
@@ -417,6 +434,8 @@ public class AgentService
 
         market.BtcTechnical = CalculateTechnical(btcHistory);
         market.EthTechnical = CalculateTechnical(ethHistory);
+
+        var valuation = _valuationService.Calculate(portfolio, market);
 
         var llmState = await llmStateBuilder.BuildAsync(portfolio, market);
         var tradesToday = llmState.Risk.TradesToday;
@@ -506,14 +525,11 @@ STATE_JSON:
 
         suggestion ??= BuildInvalidSuggestion();
 
-        var (decision, trade) = _riskEngine.Apply(suggestion, portfolio, market, tradesToday, _riskConfig);
+        var (decision, trade) = _riskEngine.Apply(suggestion, portfolio, valuation, market, tradesToday, _riskConfig);
         decision.Mode = _appConfig.Mode.ToString().ToUpperInvariant();
         decision.ProviderUsed = "OpenAI";
         decision.LlmConfidence = suggestion.Confidence;
         decision.RawModelOutput = modelOutput;
-        LastDecision = decision;
-
-        await decisionRepository.AddAsync(decision);
 
         if (decision.Executed && trade != null)
         {
@@ -523,10 +539,23 @@ STATE_JSON:
             var executedTrade = await exchangeClient.PlaceMarketOrderAsync(symbol, trade.SizeGbp, side);
             decision.FinalSizeGbp = executedTrade.SizeGbp;
             decision.RiskReason = "Executed";
+            decision.Executed = executedTrade.SizeGbp > 0;
         }
 
         portfolio = await portfolioRepository.GetAsync();
-        var dto = portfolio.ToDto(market);
+        valuation = _valuationService.Calculate(portfolio, market);
+        var dto = portfolio.ToDto(valuation);
+
+        decision.BtcValueGbp = valuation.BtcValueGbp;
+        decision.EthValueGbp = valuation.EthValueGbp;
+        decision.TotalValueGbp = valuation.TotalValueGbp;
+        decision.BtcUnrealisedPnlGbp = valuation.BtcUnrealisedPnlGbp;
+        decision.EthUnrealisedPnlGbp = valuation.EthUnrealisedPnlGbp;
+        decision.BtcCostBasisGbp = portfolio.BtcCostBasisGbp;
+        decision.EthCostBasisGbp = portfolio.EthCostBasisGbp;
+        LastDecision = decision;
+
+        await decisionRepository.AddAsync(decision);
 
         if (portfolio.HighWatermarkGbp == 0)
         {

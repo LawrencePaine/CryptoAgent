@@ -12,24 +12,27 @@ public class LlmStateBuilder
     private readonly RiskConfig _riskConfig;
     private readonly FeeConfig _feeConfig;
     private readonly AppConfig _appConfig;
+    private readonly PortfolioValuationService _valuationService;
 
     public LlmStateBuilder(
         PortfolioRepository portfolioRepository,
         DecisionRepository decisionRepository,
         RiskConfig riskConfig,
         FeeConfig feeConfig,
-        AppConfig appConfig)
+        AppConfig appConfig,
+        PortfolioValuationService valuationService)
     {
         _portfolioRepository = portfolioRepository;
         _decisionRepository = decisionRepository;
         _riskConfig = riskConfig;
         _feeConfig = feeConfig;
         _appConfig = appConfig;
+        _valuationService = valuationService;
     }
 
     public async Task<LlmState> BuildAsync(Portfolio portfolio, MarketSnapshot market)
     {
-        var dto = portfolio.ToDto(market);
+        var valuation = _valuationService.Calculate(portfolio, market);
 
         var recentTrades = await _portfolioRepository.GetRecentTradesAsync(10);
         var tradesToday = await _portfolioRepository.CountTradesTodayAsync();
@@ -41,16 +44,23 @@ public class LlmStateBuilder
             Mode = _appConfig.Mode == AgentMode.Live ? "LIVE" : "PAPER",
             Portfolio = new LlmPortfolioState
             {
-                CashGbp = dto.CashGbp,
-                VaultGbp = dto.VaultGbp,
-                BtcAmount = dto.BtcAmount,
-                EthAmount = dto.EthAmount,
-                BtcValueGbp = dto.BtcValueGbp,
-                EthValueGbp = dto.EthValueGbp,
-                TotalValueGbp = dto.TotalValueGbp,
-                BtcAllocationPct = dto.BtcAllocationPct,
-                EthAllocationPct = dto.EthAllocationPct,
-                CashAllocationPct = dto.CashAllocationPct
+                CashGbp = portfolio.CashGbp,
+                VaultGbp = portfolio.VaultGbp,
+                BtcAmount = portfolio.BtcAmount,
+                EthAmount = portfolio.EthAmount,
+                BtcCostBasisGbp = portfolio.BtcCostBasisGbp,
+                EthCostBasisGbp = portfolio.EthCostBasisGbp,
+                BtcValueGbp = valuation.BtcValueGbp,
+                EthValueGbp = valuation.EthValueGbp,
+                TotalValueGbp = valuation.TotalValueGbp,
+                BtcUnrealisedPnlGbp = valuation.BtcUnrealisedPnlGbp,
+                EthUnrealisedPnlGbp = valuation.EthUnrealisedPnlGbp,
+                BtcUnrealisedPnlPct = valuation.BtcUnrealisedPnlPct,
+                EthUnrealisedPnlPct = valuation.EthUnrealisedPnlPct,
+                BtcAllocationPct = valuation.BtcAllocationPct,
+                EthAllocationPct = valuation.EthAllocationPct,
+                CashAllocationPct = valuation.CashAllocationPct,
+                VaultAllocationPct = valuation.VaultAllocationPct
             },
             Market = new LlmMarketState
             {
@@ -89,6 +99,7 @@ public class LlmStateBuilder
             TimestampUtc = t.TimestampUtc,
             Asset = t.Asset == AssetType.Btc ? "BTC" : "ETH",
             Action = t.Action == RawActionType.Buy ? "BUY" : "SELL",
+            AssetAmount = t.AssetAmount,
             SizeGbp = t.SizeGbp,
             PriceGbp = t.PriceGbp,
             FeeGbp = t.FeeGbp,

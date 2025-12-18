@@ -24,6 +24,8 @@ public class PortfolioRepository
                 CashGbp = 50m,
                 BtcAmount = 0,
                 EthAmount = 0,
+                BtcCostBasisGbp = 0,
+                EthCostBasisGbp = 0,
                 VaultGbp = 0,
                 HighWatermarkGbp = 0
             };
@@ -46,6 +48,8 @@ public class PortfolioRepository
         entity.CashGbp = portfolio.CashGbp;
         entity.BtcAmount = portfolio.BtcAmount;
         entity.EthAmount = portfolio.EthAmount;
+        entity.BtcCostBasisGbp = portfolio.BtcCostBasisGbp;
+        entity.EthCostBasisGbp = portfolio.EthCostBasisGbp;
         entity.VaultGbp = portfolio.VaultGbp;
         entity.HighWatermarkGbp = portfolio.HighWatermarkGbp;
 
@@ -59,6 +63,7 @@ public class PortfolioRepository
             TimestampUtc = trade.TimestampUtc,
             Asset = trade.Asset == AssetType.Btc ? "BTC" : "ETH",
             Action = trade.Action == RawActionType.Buy ? "BUY" : "SELL",
+            AssetAmount = trade.AssetAmount,
             SizeGbp = trade.SizeGbp,
             PriceGbp = trade.PriceGbp,
             FeeGbp = trade.FeeGbp,
@@ -98,6 +103,8 @@ public class PortfolioRepository
             CashGbp = entity.CashGbp,
             BtcAmount = entity.BtcAmount,
             EthAmount = entity.EthAmount,
+            BtcCostBasisGbp = entity.BtcCostBasisGbp,
+            EthCostBasisGbp = entity.EthCostBasisGbp,
             VaultGbp = entity.VaultGbp,
             HighWatermarkGbp = entity.HighWatermarkGbp
         };
@@ -110,6 +117,7 @@ public class PortfolioRepository
             TimestampUtc = entity.TimestampUtc,
             Asset = entity.Asset.ToUpperInvariant() == "BTC" ? AssetType.Btc : AssetType.Eth,
             Action = entity.Action.ToUpperInvariant() == "BUY" ? RawActionType.Buy : RawActionType.Sell,
+            AssetAmount = entity.AssetAmount,
             SizeGbp = entity.SizeGbp,
             PriceGbp = entity.PriceGbp,
             FeeGbp = entity.FeeGbp,

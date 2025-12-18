@@ -110,6 +110,7 @@ builder.Services.AddHttpClient("coingecko", (sp, client) =>
     }
 });
 builder.Services.AddSingleton<MarketDataService>();
+builder.Services.AddSingleton<PortfolioValuationService>();
 builder.Services.AddSingleton<RiskEngine>();
 builder.Services.AddSingleton<AgentService>();
 builder.Services.AddSingleton<HourlyFeatureCalculator>();

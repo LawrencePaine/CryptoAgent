@@ -8,6 +8,7 @@ public class PaperExchangeClient : IExchangeClient
     private readonly PortfolioRepository _portfolioRepository;
     private readonly MarketDataService _marketDataService;
     private readonly FeeConfig _feeConfig;
+    private const decimal SlippagePct = 0.001m;
 
     public PaperExchangeClient(PortfolioRepository portfolioRepository, MarketDataService marketDataService, FeeConfig feeConfig)
     {
@@ -44,8 +45,12 @@ public class PaperExchangeClient : IExchangeClient
             throw new InvalidOperationException($"Invalid price for {symbol}");
         }
 
+        var effectivePrice = side == OrderSide.Buy
+            ? price * (1 + SlippagePct)
+            : price * (1 - SlippagePct);
+
         var feeGbp = sizeGbp * _feeConfig.TakerPct;
-        var assetAmount = price > 0 ? sizeGbp / price : 0;
+        var assetAmount = sizeGbp / effectivePrice;
 
         if (side == OrderSide.Buy)
         {
@@ -56,23 +61,45 @@ public class PaperExchangeClient : IExchangeClient
             }
 
             portfolio.CashGbp -= totalCost;
-            if (symbol.ToUpperInvariant() == "BTC") portfolio.BtcAmount += assetAmount;
-            if (symbol.ToUpperInvariant() == "ETH") portfolio.EthAmount += assetAmount;
+            if (symbol.ToUpperInvariant() == "BTC")
+            {
+                portfolio.BtcAmount += assetAmount;
+                portfolio.BtcCostBasisGbp += totalCost;
+            }
+            if (symbol.ToUpperInvariant() == "ETH")
+            {
+                portfolio.EthAmount += assetAmount;
+                portfolio.EthCostBasisGbp += totalCost;
+            }
         }
         else
         {
             if (symbol.ToUpperInvariant() == "BTC")
             {
-                assetAmount = Math.Min(assetAmount, portfolio.BtcAmount);
+                var holdingsBefore = portfolio.BtcAmount;
+                assetAmount = Math.Min(assetAmount, holdingsBefore);
                 portfolio.BtcAmount -= assetAmount;
+                if (holdingsBefore > 0)
+                {
+                    var proportionSold = assetAmount / holdingsBefore;
+                    portfolio.BtcCostBasisGbp -= portfolio.BtcCostBasisGbp * proportionSold;
+                    portfolio.BtcCostBasisGbp = Math.Max(0, portfolio.BtcCostBasisGbp);
+                }
             }
             else if (symbol.ToUpperInvariant() == "ETH")
             {
-                assetAmount = Math.Min(assetAmount, portfolio.EthAmount);
+                var holdingsBefore = portfolio.EthAmount;
+                assetAmount = Math.Min(assetAmount, holdingsBefore);
                 portfolio.EthAmount -= assetAmount;
+                if (holdingsBefore > 0)
+                {
+                    var proportionSold = assetAmount / holdingsBefore;
+                    portfolio.EthCostBasisGbp -= portfolio.EthCostBasisGbp * proportionSold;
+                    portfolio.EthCostBasisGbp = Math.Max(0, portfolio.EthCostBasisGbp);
+                }
             }
 
-            var adjustedSize = assetAmount * price;
+            var adjustedSize = assetAmount * effectivePrice;
             feeGbp = adjustedSize * _feeConfig.TakerPct;
             portfolio.CashGbp += adjustedSize - feeGbp;
             sizeGbp = adjustedSize;
@@ -85,8 +112,9 @@ public class PaperExchangeClient : IExchangeClient
             TimestampUtc = DateTime.UtcNow,
             Asset = symbol.ToUpperInvariant() == "BTC" ? AssetType.Btc : AssetType.Eth,
             Action = side == OrderSide.Buy ? RawActionType.Buy : RawActionType.Sell,
+            AssetAmount = assetAmount,
             SizeGbp = sizeGbp,
-            PriceGbp = price,
+            PriceGbp = effectivePrice,
             FeeGbp = feeGbp,
             Mode = "PAPER"
         };
@@ -98,6 +126,7 @@ public class PaperExchangeClient : IExchangeClient
             TimestampUtc = trade.TimestampUtc,
             Asset = trade.Asset == AssetType.Btc ? "BTC" : "ETH",
             Side = side,
+            AssetAmount = trade.AssetAmount,
             SizeGbp = trade.SizeGbp,
             PriceGbp = trade.PriceGbp,
             FeeGbp = trade.FeeGbp,
@@ -113,6 +142,7 @@ public class PaperExchangeClient : IExchangeClient
             TimestampUtc = t.TimestampUtc,
             Asset = t.Asset == AssetType.Btc ? "BTC" : "ETH",
             Side = t.Action == RawActionType.Buy ? OrderSide.Buy : OrderSide.Sell,
+            AssetAmount = t.AssetAmount,
             SizeGbp = t.SizeGbp,
             PriceGbp = t.PriceGbp,
             FeeGbp = t.FeeGbp,

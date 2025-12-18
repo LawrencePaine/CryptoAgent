@@ -1,14 +1,20 @@
+export type AssetPosition = {
+  amount: number;
+  costBasisGbp: number;
+  currentValueGbp: number;
+  unrealisedPnlGbp: number;
+  unrealisedPnlPct: number;
+  allocationPct: number;
+};
+
 export type PortfolioDto = {
   cashGbp: number;
   vaultGbp: number;
-  btcAmount: number;
-  ethAmount: number;
-  btcValueGbp: number;
-  ethValueGbp: number;
   totalValueGbp: number;
-  btcAllocationPct: number;
-  ethAllocationPct: number;
   cashAllocationPct: number;
+  vaultAllocationPct: number;
+  btc: AssetPosition;
+  eth: AssetPosition;
 };
 
 export type MarketSnapshot = {
@@ -29,6 +35,13 @@ export type LastDecision = {
   finalAction: "Buy" | "Sell" | "Hold" | "BUY" | "SELL" | "HOLD";
   finalAsset: "Btc" | "Eth" | "None" | "BTC" | "ETH" | "NONE";
   finalSizeGbp: number;
+  btcValueGbp?: number;
+  ethValueGbp?: number;
+  totalValueGbp?: number;
+  btcUnrealisedPnlGbp?: number;
+  ethUnrealisedPnlGbp?: number;
+  btcCostBasisGbp?: number;
+  ethCostBasisGbp?: number;
   executed: boolean;
   riskReason: string;
   rationaleShort: string;
@@ -40,6 +53,7 @@ export type Trade = {
   timestampUtc: string;
   asset: "Btc" | "Eth" | "BTC" | "ETH";
   action: "Buy" | "Sell" | "BUY" | "SELL";
+  assetAmount: number;
   sizeGbp: number;
   priceGbp: number;
   mode: "PAPER" | "LIVE";

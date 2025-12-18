@@ -11,6 +11,7 @@ export function RecentTradesTable({ trades }: { trades: Trade[] }) {
                             <th className="p-4 text-left font-medium">Time</th>
                             <th className="p-4 text-left font-medium">Asset</th>
                             <th className="p-4 text-left font-medium">Action</th>
+                            <th className="p-4 text-left font-medium">Units</th>
                             <th className="p-4 text-left font-medium">Size (£)</th>
                             <th className="p-4 text-left font-medium">Price (£)</th>
                             <th className="p-4 text-left font-medium">Mode</th>
@@ -29,6 +30,7 @@ export function RecentTradesTable({ trades }: { trades: Trade[] }) {
                                         {t.action}
                                     </span>
                                 </td>
+                                <td className="p-4 text-gray-300 font-mono">{t.assetAmount.toFixed(8)}</td>
                                 <td className="p-4 text-gray-300 font-mono">£{t.sizeGbp.toFixed(2)}</td>
                                 <td className="p-4 text-gray-300 font-mono">£{t.priceGbp.toLocaleString()}</td>
                                 <td className="p-4">
@@ -38,7 +40,7 @@ export function RecentTradesTable({ trades }: { trades: Trade[] }) {
                         ))}
                         {trades.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="p-8 text-center text-gray-500 italic">No trades recorded in the neural log.</td>
+                                <td colSpan={7} className="p-8 text-center text-gray-500 italic">No trades recorded in the neural log.</td>
                             </tr>
                         )}
                     </tbody>
