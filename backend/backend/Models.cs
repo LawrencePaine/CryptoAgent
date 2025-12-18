@@ -8,6 +8,9 @@ public class Portfolio
     public decimal BtcAmount { get; set; }
     public decimal EthAmount { get; set; }
 
+    public decimal BtcCostBasisGbp { get; set; }
+    public decimal EthCostBasisGbp { get; set; }
+
     // Profit "vault" - off-limits to trading
     public decimal VaultGbp { get; set; }
 
@@ -65,6 +68,7 @@ public class Trade
     public DateTime TimestampUtc { get; set; }
     public AssetType Asset { get; set; }
     public RawActionType Action { get; set; }
+    public decimal AssetAmount { get; set; }
     public decimal SizeGbp { get; set; }
     public decimal PriceGbp { get; set; }
     public decimal FeeGbp { get; set; }
@@ -85,6 +89,14 @@ public class LastDecision
     public AssetType FinalAsset { get; set; }
     public decimal FinalSizeGbp { get; set; }
 
+    public decimal BtcValueGbp { get; set; }
+    public decimal EthValueGbp { get; set; }
+    public decimal TotalValueGbp { get; set; }
+    public decimal BtcUnrealisedPnlGbp { get; set; }
+    public decimal EthUnrealisedPnlGbp { get; set; }
+    public decimal BtcCostBasisGbp { get; set; }
+    public decimal EthCostBasisGbp { get; set; }
+
     public bool Executed { get; set; }
     public string RiskReason { get; set; } = string.Empty;
     public string RationaleShort { get; set; } = string.Empty;
@@ -104,19 +116,44 @@ public class LlmSuggestion
     public string Notes { get; set; } = string.Empty;
 }
 
+public class PortfolioValuation
+{
+    public decimal BtcValueGbp { get; set; }
+    public decimal EthValueGbp { get; set; }
+    public decimal TotalValueGbp { get; set; }
+
+    public decimal BtcUnrealisedPnlGbp { get; set; }
+    public decimal EthUnrealisedPnlGbp { get; set; }
+    public decimal BtcUnrealisedPnlPct { get; set; }
+    public decimal EthUnrealisedPnlPct { get; set; }
+
+    public decimal BtcAllocationPct { get; set; }
+    public decimal EthAllocationPct { get; set; }
+    public decimal CashAllocationPct { get; set; }
+    public decimal VaultAllocationPct { get; set; }
+}
+
+public class AssetPositionDto
+{
+    public decimal Amount { get; set; }
+    public decimal CostBasisGbp { get; set; }
+    public decimal CurrentValueGbp { get; set; }
+    public decimal UnrealisedPnlGbp { get; set; }
+    public decimal UnrealisedPnlPct { get; set; }
+    public decimal AllocationPct { get; set; }
+}
+
 // DTO for portfolio + derived values
 public class PortfolioDto
 {
     public decimal CashGbp { get; set; }
     public decimal VaultGbp { get; set; }
-    public decimal BtcAmount { get; set; }
-    public decimal EthAmount { get; set; }
-    public decimal BtcValueGbp { get; set; }
-    public decimal EthValueGbp { get; set; }
     public decimal TotalValueGbp { get; set; }
-    public decimal BtcAllocationPct { get; set; }
-    public decimal EthAllocationPct { get; set; }
     public decimal CashAllocationPct { get; set; }
+    public decimal VaultAllocationPct { get; set; }
+
+    public AssetPositionDto Btc { get; set; } = new();
+    public AssetPositionDto Eth { get; set; } = new();
 }
 
 public class DashboardResponse
@@ -172,24 +209,33 @@ public enum AgentMode
 
 public static class PortfolioExtensions
 {
-    public static PortfolioDto ToDto(this Portfolio portfolio, MarketSnapshot market)
+    public static PortfolioDto ToDto(this Portfolio portfolio, PortfolioValuation valuation)
     {
-        var btcVal = portfolio.BtcAmount * market.BtcPriceGbp;
-        var ethVal = portfolio.EthAmount * market.EthPriceGbp;
-        var totalVal = portfolio.CashGbp + portfolio.VaultGbp + btcVal + ethVal;
-
         return new PortfolioDto
         {
             CashGbp = portfolio.CashGbp,
             VaultGbp = portfolio.VaultGbp,
-            BtcAmount = portfolio.BtcAmount,
-            EthAmount = portfolio.EthAmount,
-            BtcValueGbp = btcVal,
-            EthValueGbp = ethVal,
-            TotalValueGbp = totalVal,
-            BtcAllocationPct = totalVal > 0 ? btcVal / totalVal : 0,
-            EthAllocationPct = totalVal > 0 ? ethVal / totalVal : 0,
-            CashAllocationPct = totalVal > 0 ? (portfolio.CashGbp + portfolio.VaultGbp) / totalVal : 0
+            TotalValueGbp = valuation.TotalValueGbp,
+            CashAllocationPct = valuation.CashAllocationPct,
+            VaultAllocationPct = valuation.VaultAllocationPct,
+            Btc = new AssetPositionDto
+            {
+                Amount = portfolio.BtcAmount,
+                CostBasisGbp = portfolio.BtcCostBasisGbp,
+                CurrentValueGbp = valuation.BtcValueGbp,
+                UnrealisedPnlGbp = valuation.BtcUnrealisedPnlGbp,
+                UnrealisedPnlPct = valuation.BtcUnrealisedPnlPct,
+                AllocationPct = valuation.BtcAllocationPct
+            },
+            Eth = new AssetPositionDto
+            {
+                Amount = portfolio.EthAmount,
+                CostBasisGbp = portfolio.EthCostBasisGbp,
+                CurrentValueGbp = valuation.EthValueGbp,
+                UnrealisedPnlGbp = valuation.EthUnrealisedPnlGbp,
+                UnrealisedPnlPct = valuation.EthUnrealisedPnlPct,
+                AllocationPct = valuation.EthAllocationPct
+            }
         };
     }
 }

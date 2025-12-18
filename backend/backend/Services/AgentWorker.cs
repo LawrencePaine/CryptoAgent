@@ -37,6 +37,7 @@ public class AgentWorker : BackgroundService
             var regimeRepo = scope.ServiceProvider.GetRequiredService<RegimeStateRepository>();
             var strategyRepo = scope.ServiceProvider.GetRequiredService<StrategySignalRepository>();
             var portfolioRepo = scope.ServiceProvider.GetRequiredService<PortfolioRepository>();
+            var valuationService = scope.ServiceProvider.GetRequiredService<PortfolioValuationService>();
             var strategies = scope.ServiceProvider.GetServices<IStrategyModule>().ToList();
 
             var now = DateTime.UtcNow;
@@ -57,7 +58,7 @@ public class AgentWorker : BackgroundService
 
             if (now.Minute == _workerConfig.RunDecisionMinute && lastDecisionHour != currentHour)
             {
-                await RunHourlyPipelineAsync(marketDataService, portfolioRepo, candleRepo, featureCalculator, featureRepo, regimeClassifier, regimeRepo, strategies, strategyRepo, riskConfig, stoppingToken);
+                await RunHourlyPipelineAsync(marketDataService, portfolioRepo, candleRepo, featureCalculator, featureRepo, regimeClassifier, regimeRepo, strategies, strategyRepo, riskConfig, valuationService, stoppingToken);
                 await agentService.RunOnceAsync();
                 lastDecisionHour = currentHour;
             }
@@ -119,13 +120,12 @@ public class AgentWorker : BackgroundService
         List<IStrategyModule> strategies,
         StrategySignalRepository signalRepository,
         RiskConfig riskConfig,
+        PortfolioValuationService valuationService,
         CancellationToken ct)
     {
         var market = await marketDataService.GetSnapshotAsync();
         var portfolio = await portfolioRepository.GetAsync();
-        portfolio.BtcValueGbp = portfolio.BtcAmount * market.BtcPriceGbp;
-        portfolio.EthValueGbp = portfolio.EthAmount * market.EthPriceGbp;
-        portfolio.TotalValueGbp = portfolio.CashGbp + portfolio.VaultGbp + portfolio.BtcValueGbp + portfolio.EthValueGbp;
+        valuationService.Calculate(portfolio, market);
 
         foreach (var asset in new[] { "BTC", "ETH" })
         {

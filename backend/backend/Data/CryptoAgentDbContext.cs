@@ -33,6 +33,8 @@ public class CryptoAgentDbContext : DbContext
             entity.ToTable("Portfolios");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Id).IsUnique();
+            entity.Property(e => e.BtcCostBasisGbp).HasDefaultValue(0);
+            entity.Property(e => e.EthCostBasisGbp).HasDefaultValue(0);
         });
 
         modelBuilder.Entity<TradeEntity>(entity =>
@@ -41,6 +43,7 @@ public class CryptoAgentDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Asset).IsRequired();
             entity.Property(e => e.Action).IsRequired();
+            entity.Property(e => e.AssetAmount).HasDefaultValue(0);
             entity.Property(e => e.Mode).HasDefaultValue("PAPER");
         });
 
@@ -60,6 +63,13 @@ public class CryptoAgentDbContext : DbContext
         {
             entity.ToTable("DecisionLogs");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.BtcValueGbp).HasDefaultValue(0);
+            entity.Property(e => e.EthValueGbp).HasDefaultValue(0);
+            entity.Property(e => e.TotalValueGbp).HasDefaultValue(0);
+            entity.Property(e => e.BtcUnrealisedPnlGbp).HasDefaultValue(0);
+            entity.Property(e => e.EthUnrealisedPnlGbp).HasDefaultValue(0);
+            entity.Property(e => e.BtcCostBasisGbp).HasDefaultValue(0);
+            entity.Property(e => e.EthCostBasisGbp).HasDefaultValue(0);
         });
 
         modelBuilder.Entity<Entities.HourlyCandleEntity>(entity =>
@@ -136,6 +146,8 @@ public class PortfolioEntity
     public decimal CashGbp { get; set; }
     public decimal BtcAmount { get; set; }
     public decimal EthAmount { get; set; }
+    public decimal BtcCostBasisGbp { get; set; }
+    public decimal EthCostBasisGbp { get; set; }
     public decimal VaultGbp { get; set; }
     public decimal HighWatermarkGbp { get; set; }
 }
@@ -146,6 +158,7 @@ public class TradeEntity
     public DateTime TimestampUtc { get; set; }
     public string Asset { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
+    public decimal AssetAmount { get; set; }
     public decimal SizeGbp { get; set; }
     public decimal PriceGbp { get; set; }
     public decimal FeeGbp { get; set; }
@@ -189,6 +202,13 @@ public class DecisionLogEntity
     public string FinalAction { get; set; } = string.Empty;
     public string FinalAsset { get; set; } = string.Empty;
     public decimal FinalSizeGbp { get; set; }
+    public decimal BtcValueGbp { get; set; }
+    public decimal EthValueGbp { get; set; }
+    public decimal TotalValueGbp { get; set; }
+    public decimal BtcUnrealisedPnlGbp { get; set; }
+    public decimal EthUnrealisedPnlGbp { get; set; }
+    public decimal BtcCostBasisGbp { get; set; }
+    public decimal EthCostBasisGbp { get; set; }
     
     public bool Executed { get; set; }
     public string RationaleShort { get; set; } = string.Empty;

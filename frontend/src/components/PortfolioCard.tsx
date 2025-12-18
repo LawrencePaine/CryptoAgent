@@ -30,21 +30,36 @@ export function PortfolioCard({ portfolio }: { portfolio: PortfolioDto }) {
                 </div>
 
                 {/* Assets */}
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-crypto-dark/50 rounded-lg p-3 border border-white/5">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-orange-400 font-bold">BTC</span>
-                            <span className="text-xs text-gray-500">{(portfolio.btcAllocationPct * 100).toFixed(1)}%</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[{
+                        label: "BTC",
+                        color: "text-orange-400",
+                        data: portfolio.btc
+                    }, {
+                        label: "ETH",
+                        color: "text-blue-400",
+                        data: portfolio.eth
+                    }].map((asset) => (
+                        <div key={asset.label} className="bg-crypto-dark/50 rounded-lg p-3 border border-white/5">
+                            <div className="flex justify-between items-start mb-1">
+                                <div>
+                                    <div className={`${asset.color} font-bold`}>{asset.label}</div>
+                                    <div className="text-xs text-gray-500">Allocation {(asset.data.allocationPct * 100).toFixed(1)}%</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-gray-500 uppercase">Holding</div>
+                                    <div className="text-white font-mono text-sm">{asset.data.amount.toFixed(8)} {asset.label}</div>
+                                </div>
+                            </div>
+
+                            <div className="text-gray-300 text-sm">Cost: £{asset.data.costBasisGbp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className="text-gray-300 text-sm">Value now: £{asset.data.currentValueGbp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className={`text-sm font-semibold ${asset.data.unrealisedPnlGbp >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                Unrealised: {asset.data.unrealisedPnlGbp >= 0 ? '+' : ''}£{asset.data.unrealisedPnlGbp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {` (${(asset.data.unrealisedPnlPct * 100).toFixed(2)}%)`}
+                            </div>
                         </div>
-                        <div className="text-white font-mono text-sm">£{portfolio.btcValueGbp.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
-                    <div className="bg-crypto-dark/50 rounded-lg p-3 border border-white/5">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-blue-400 font-bold">ETH</span>
-                            <span className="text-xs text-gray-500">{(portfolio.ethAllocationPct * 100).toFixed(1)}%</span>
-                        </div>
-                        <div className="text-white font-mono text-sm">£{portfolio.ethValueGbp.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>
