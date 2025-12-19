@@ -166,11 +166,6 @@ namespace backend.Migrations
                     b.Property<decimal>("BtcAmount")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("BtcCostBasisGbp")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue(0m);
-
                     b.Property<decimal>("BtcCloseGbp")
                         .HasColumnType("TEXT");
 
@@ -183,11 +178,6 @@ namespace backend.Migrations
 
                     b.Property<decimal>("EthAmount")
                         .HasColumnType("TEXT");
-
-                    b.Property<decimal>("EthCostBasisGbp")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue(0m);
 
                     b.Property<decimal>("EthCloseGbp")
                         .HasColumnType("TEXT");
@@ -283,20 +273,6 @@ namespace backend.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue(0m);
 
-                    b.Property<bool>("Executed")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("FinalAction")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FinalAsset")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("FinalSizeGbp")
-                        .HasColumnType("TEXT");
-
                     b.Property<decimal>("EthCostBasisGbp")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
@@ -311,6 +287,20 @@ namespace backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValue(0m);
+
+                    b.Property<bool>("Executed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FinalAction")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FinalAsset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FinalSizeGbp")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LlmAction")
                         .IsRequired()
@@ -601,11 +591,21 @@ namespace backend.Migrations
                     b.Property<decimal>("BtcAmount")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("BtcCostBasisGbp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
+
                     b.Property<decimal>("CashGbp")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("EthAmount")
                         .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EthCostBasisGbp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
 
                     b.Property<decimal>("HighWatermarkGbp")
                         .HasColumnType("TEXT");
