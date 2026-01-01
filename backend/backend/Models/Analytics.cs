@@ -50,4 +50,9 @@ public class WorkerConfig
     public int SnapshotMinutes { get; set; } = 10;
     public int HourlyCandleFetchMinute { get; set; } = 2;
     public int RunDecisionMinute { get; set; } = 5;
+    public int ExogenousIngestMinute { get; set; } = 0;
+    public int ExogenousClassifyMinute { get; set; } = 5;
+    public int ExogenousNarrativeMinute { get; set; } = 10;
+    public int ExogenousDecisionInputsMinute { get; set; } = 15;
+    public int ExogenousClassificationBatchSize { get; set; } = 50;
 }

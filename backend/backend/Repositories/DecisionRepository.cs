@@ -39,6 +39,8 @@ public class DecisionRepository
             RationaleShort = decision.RationaleShort,
             RationaleDetailed = decision.RationaleDetailed,
             RiskReason = decision.RiskReason,
+            ExogenousTraceJson = decision.ExogenousTraceJson,
+            ExogenousSummary = decision.ExogenousSummary,
             Mode = decision.Mode
         };
 
@@ -76,6 +78,8 @@ public class DecisionRepository
             RationaleShort = e.RationaleShort,
             RationaleDetailed = e.RationaleDetailed,
             RiskReason = e.RiskReason,
+            ExogenousTraceJson = e.ExogenousTraceJson,
+            ExogenousSummary = e.ExogenousSummary,
             Mode = e.Mode
         }).ToList();
     }

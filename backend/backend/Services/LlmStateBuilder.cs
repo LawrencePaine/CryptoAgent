@@ -9,6 +9,7 @@ public class LlmStateBuilder
 {
     private readonly PortfolioRepository _portfolioRepository;
     private readonly DecisionRepository _decisionRepository;
+    private readonly DecisionInputsExogenousRepository _exogenousRepository;
     private readonly RiskConfig _riskConfig;
     private readonly FeeConfig _feeConfig;
     private readonly AppConfig _appConfig;
@@ -17,6 +18,7 @@ public class LlmStateBuilder
     public LlmStateBuilder(
         PortfolioRepository portfolioRepository,
         DecisionRepository decisionRepository,
+        DecisionInputsExogenousRepository exogenousRepository,
         RiskConfig riskConfig,
         FeeConfig feeConfig,
         AppConfig appConfig,
@@ -24,6 +26,7 @@ public class LlmStateBuilder
     {
         _portfolioRepository = portfolioRepository;
         _decisionRepository = decisionRepository;
+        _exogenousRepository = exogenousRepository;
         _riskConfig = riskConfig;
         _feeConfig = feeConfig;
         _appConfig = appConfig;
@@ -37,6 +40,7 @@ public class LlmStateBuilder
         var recentTrades = await _portfolioRepository.GetRecentTradesAsync(10);
         var tradesToday = await _portfolioRepository.CountTradesTodayAsync();
         var recentDecisions = await _decisionRepository.GetRecentDecisionsAsync(10);
+        var exogenous = await _exogenousRepository.GetLatestAsync();
 
         var state = new LlmState
         {
@@ -93,6 +97,20 @@ public class LlmStateBuilder
                 }
                 : null
         };
+
+        if (exogenous != null)
+        {
+            var dto = DecisionInputsExogenousRepository.ToDto(exogenous);
+            state.Exogenous = new LlmExogenousState
+            {
+                ThemeScores = dto.ThemeScores,
+                AlignmentFlags = dto.AlignmentFlags,
+                AbstainModifier = dto.AbstainModifier,
+                ConfidenceThresholdModifier = dto.ConfidenceThresholdModifier,
+                Notes = dto.Notes,
+                TraceIds = dto.TraceIds
+            };
+        }
 
         state.RecentTrades.AddRange(recentTrades.Select(t => new LlmRecentTrade
         {

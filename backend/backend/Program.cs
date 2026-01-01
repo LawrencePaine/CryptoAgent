@@ -2,6 +2,8 @@ using CryptoAgent.Api.Data;
 using CryptoAgent.Api.Models;
 using CryptoAgent.Api.Repositories;
 using CryptoAgent.Api.Services;
+using CryptoAgent.Api.Services.Exogenous;
+using CryptoAgent.Api.Worker.Jobs.Exogenous;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -95,6 +97,10 @@ builder.Services.AddScoped<HourlyCandleRepository>();
 builder.Services.AddScoped<HourlyFeatureRepository>();
 builder.Services.AddScoped<RegimeStateRepository>();
 builder.Services.AddScoped<StrategySignalRepository>();
+builder.Services.AddScoped<ExogenousItemRepository>();
+builder.Services.AddScoped<ExogenousClassificationRepository>();
+builder.Services.AddScoped<NarrativeRepository>();
+builder.Services.AddScoped<DecisionInputsExogenousRepository>();
 builder.Services.AddScoped<LlmStateBuilder>();
 builder.Services.AddHttpClient("coingecko", (sp, client) =>
 {
@@ -109,12 +115,29 @@ builder.Services.AddHttpClient("coingecko", (sp, client) =>
         client.DefaultRequestHeaders.Add("x-cg-demo-api-key", apiKey);
     }
 });
+builder.Services.AddHttpClient("exogenous", client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent", "CryptoAgentExogenous/1.0");
+});
 builder.Services.AddSingleton<MarketDataService>();
 builder.Services.AddSingleton<PortfolioValuationService>();
 builder.Services.AddSingleton<RiskEngine>();
 builder.Services.AddSingleton<AgentService>();
 builder.Services.AddSingleton<HourlyFeatureCalculator>();
 builder.Services.AddSingleton<RegimeClassifier>();
+builder.Services.AddSingleton<ExogenousSourceRegistry>();
+builder.Services.AddSingleton<IExogenousSourceClient, RssSourceClient>();
+builder.Services.AddSingleton<IExogenousSourceClient, CuratedLinkSourceClient>();
+builder.Services.AddScoped<ExogenousIngestionService>();
+builder.Services.AddScoped<ExogenousNarrativeAggregator>();
+builder.Services.AddScoped<ExogenousDecisionInputsPublisher>();
+builder.Services.AddScoped<ExogenousDecisionLogBuilder>();
+builder.Services.AddScoped<IExogenousClassifier, ExogenousClassificationService>();
+builder.Services.AddScoped<ExogenousIngestionJob>();
+builder.Services.AddScoped<ExogenousClassificationJob>();
+builder.Services.AddScoped<ExogenousNarrativeAggregationJob>();
+builder.Services.AddScoped<ExogenousDecisionInputsJob>();
+builder.Services.AddScoped<ExogenousNarrativeRebuildJob>();
 builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.DcaAccumulateStrategy>();
 builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.MeanReversionStrategy>();
 builder.Services.AddSingleton<IStrategyModule, CryptoAgent.Api.Services.Strategies.RiskOffTrimStrategy>();
@@ -129,6 +152,7 @@ else
 }
 
 builder.Services.AddHostedService<AgentWorker>();
+builder.Services.AddHostedService<ExogenousWorker>();
 
 // OpenAI
 builder.Services.AddSingleton(sp =>

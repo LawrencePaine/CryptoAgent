@@ -1,0 +1,28 @@
+[
+  {
+    "id": "nvidia-news",
+    "type": "rss",
+    "url": "https://www.nvidia.com/en-us/rss/",
+    "pollIntervalMinutes": 120,
+    "credibilityWeight": 0.85,
+    "allowedDomains": ["nvidia.com"],
+    "themeHint": "AI_COMPUTE"
+  },
+  {
+    "id": "ethereum-blog",
+    "type": "rss",
+    "url": "https://blog.ethereum.org/en/feed.xml",
+    "pollIntervalMinutes": 60,
+    "credibilityWeight": 0.9,
+    "allowedDomains": ["ethereum.org"],
+    "themeHint": "ETH_ECOSYSTEM"
+  },
+  {
+    "id": "curated-links",
+    "type": "curated",
+    "url": "",
+    "pollIntervalMinutes": 360,
+    "credibilityWeight": 0.7,
+    "curatedLinks": []
+  }
+]
