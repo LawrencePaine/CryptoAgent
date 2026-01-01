@@ -425,6 +425,7 @@ public class AgentService
         var decisionRepository = scope.ServiceProvider.GetRequiredService<DecisionRepository>();
         var exchangeClient = scope.ServiceProvider.GetRequiredService<IExchangeClient>();
         var llmStateBuilder = scope.ServiceProvider.GetRequiredService<LlmStateBuilder>();
+        var exogenousDecisionLogBuilder = scope.ServiceProvider.GetRequiredService<Services.Exogenous.ExogenousDecisionLogBuilder>();
 
         var portfolio = await portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
@@ -459,6 +460,7 @@ You MUST consider existing positions, allocations, cash remaining, fees, risk co
 You will be given a JSON state object. Use ONLY values present in that state.
 Do NOT invent indicator values or portfolio amounts.
 If indicators are missing or null, do NOT use them; prefer HOLD.
+If Exogenous modifiers are present, treat them as risk modifiers (they never directly trigger trades).
 
 Output MUST be strict JSON only (no markdown, no extra text) matching exactly this schema:
 {
@@ -553,6 +555,9 @@ STATE_JSON:
         decision.EthUnrealisedPnlGbp = valuation.EthUnrealisedPnlGbp;
         decision.BtcCostBasisGbp = portfolio.BtcCostBasisGbp;
         decision.EthCostBasisGbp = portfolio.EthCostBasisGbp;
+        var (exogenousTraceJson, exogenousSummary) = await exogenousDecisionLogBuilder.BuildLatestAsync();
+        decision.ExogenousTraceJson = exogenousTraceJson;
+        decision.ExogenousSummary = exogenousSummary;
         LastDecision = decision;
 
         await decisionRepository.AddAsync(decision);

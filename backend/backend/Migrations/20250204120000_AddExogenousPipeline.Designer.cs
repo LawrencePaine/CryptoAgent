@@ -3,6 +3,7 @@ using System;
 using CryptoAgent.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace backend.Migrations
 {
     [DbContext(typeof(CryptoAgentDbContext))]
-    partial class CryptoAgentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250204120000_AddExogenousPipeline")]
+    partial class AddExogenousPipeline
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
@@ -887,6 +890,7 @@ namespace backend.Migrations
                     b.ToTable("Trades", (string)null);
                 });
 #pragma warning restore 612, 618
+        
         }
     }
 }

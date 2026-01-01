@@ -19,6 +19,11 @@ public class CryptoAgentDbContext : DbContext
     public DbSet<Entities.HourlyFeatureEntity> HourlyFeatures => Set<Entities.HourlyFeatureEntity>();
     public DbSet<Entities.RegimeStateEntity> RegimeStates => Set<Entities.RegimeStateEntity>();
     public DbSet<Entities.StrategySignalEntity> StrategySignals => Set<Entities.StrategySignalEntity>();
+    public DbSet<Entities.ExogenousItemEntity> ExogenousItems => Set<Entities.ExogenousItemEntity>();
+    public DbSet<Entities.ExogenousClassificationEntity> ExogenousClassifications => Set<Entities.ExogenousClassificationEntity>();
+    public DbSet<Entities.NarrativeEntity> Narratives => Set<Entities.NarrativeEntity>();
+    public DbSet<Entities.NarrativeItemEntity> NarrativeItems => Set<Entities.NarrativeItemEntity>();
+    public DbSet<Entities.DecisionInputsExogenousEntity> DecisionInputsExogenous => Set<Entities.DecisionInputsExogenousEntity>();
     public DbSet<BacktestRunEntity> BacktestRuns => Set<BacktestRunEntity>();
     public DbSet<BacktestStepEntity> BacktestSteps => Set<BacktestStepEntity>();
     public DbSet<BacktestTradeEntity> BacktestTrades => Set<BacktestTradeEntity>();
@@ -70,6 +75,8 @@ public class CryptoAgentDbContext : DbContext
             entity.Property(e => e.EthUnrealisedPnlGbp).HasDefaultValue(0);
             entity.Property(e => e.BtcCostBasisGbp).HasDefaultValue(0);
             entity.Property(e => e.EthCostBasisGbp).HasDefaultValue(0);
+            entity.Property(e => e.ExogenousTraceJson).HasDefaultValue("{}");
+            entity.Property(e => e.ExogenousSummary).HasDefaultValue(string.Empty);
         });
 
         modelBuilder.Entity<Entities.HourlyCandleEntity>(entity =>
@@ -105,6 +112,57 @@ public class CryptoAgentDbContext : DbContext
             entity.HasIndex(e => new { e.StrategyName, e.HourUtc });
             entity.Property(e => e.Asset).IsRequired();
             entity.Property(e => e.StrategyName).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.ExogenousItemEntity>(entity =>
+        {
+            entity.ToTable("ExogenousItems");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Url).IsUnique();
+            entity.HasIndex(e => e.PublishedAt);
+            entity.HasIndex(e => e.Status);
+            entity.Property(e => e.SourceId).IsRequired();
+            entity.Property(e => e.Title).IsRequired();
+            entity.Property(e => e.Url).IsRequired();
+            entity.Property(e => e.ContentHash).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.ExogenousClassificationEntity>(entity =>
+        {
+            entity.ToTable("ExogenousClassifications");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ItemId);
+            entity.HasIndex(e => e.ThemeRelevance);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.Property(e => e.ItemId).IsRequired();
+            entity.Property(e => e.ThemeRelevance).IsRequired();
+            entity.Property(e => e.ImpactHorizon).IsRequired();
+            entity.Property(e => e.DirectionalBias).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.NarrativeEntity>(entity =>
+        {
+            entity.ToTable("Narratives");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Theme);
+            entity.HasIndex(e => e.LastUpdatedAt);
+            entity.Property(e => e.Theme).IsRequired();
+            entity.Property(e => e.Label).IsRequired();
+        });
+
+        modelBuilder.Entity<Entities.NarrativeItemEntity>(entity =>
+        {
+            entity.ToTable("NarrativeItems");
+            entity.HasKey(e => new { e.NarrativeId, e.ItemId });
+            entity.HasIndex(e => e.NarrativeId);
+            entity.HasIndex(e => e.ItemId);
+        });
+
+        modelBuilder.Entity<Entities.DecisionInputsExogenousEntity>(entity =>
+        {
+            entity.ToTable("DecisionInputsExogenous");
+            entity.HasKey(e => e.TimestampUtc);
+            entity.HasIndex(e => e.TimestampUtc).IsUnique();
         });
 
         modelBuilder.Entity<BacktestRunEntity>(entity =>
@@ -214,5 +272,7 @@ public class DecisionLogEntity
     public string RationaleShort { get; set; } = string.Empty;
     public string RationaleDetailed { get; set; } = string.Empty;
     public string RiskReason { get; set; } = string.Empty;
+    public string ExogenousTraceJson { get; set; } = "{}";
+    public string ExogenousSummary { get; set; } = string.Empty;
     public string Mode { get; set; } = "PAPER";
 }

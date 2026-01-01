@@ -101,6 +101,8 @@ public class LastDecision
     public string RiskReason { get; set; } = string.Empty;
     public string RationaleShort { get; set; } = string.Empty;
     public string RationaleDetailed { get; set; } = string.Empty;
+    public string ExogenousTraceJson { get; set; } = "{}";
+    public string ExogenousSummary { get; set; } = string.Empty;
     public string Mode { get; set; } = "PAPER";
 }
 

@@ -10,6 +10,7 @@ public class LlmState
     public LlmPortfolioState Portfolio { get; set; } = new();
     public LlmMarketState Market { get; set; } = new();
     public LlmRiskState Risk { get; set; } = new();
+    public LlmExogenousState? Exogenous { get; set; }
 
     public List<LlmRecentTrade> RecentTrades { get; set; } = new();
     public List<LlmRecentDecision> RecentDecisions { get; set; } = new();
@@ -98,4 +99,14 @@ public class LlmIndicatorsState
     public decimal? EthRsi14 { get; set; }
     public decimal? EthSma50 { get; set; }
     public decimal? EthMacdHist { get; set; }
+}
+
+public class LlmExogenousState
+{
+    public Dictionary<string, decimal> ThemeScores { get; set; } = new();
+    public Dictionary<string, string> AlignmentFlags { get; set; } = new();
+    public decimal AbstainModifier { get; set; }
+    public decimal ConfidenceThresholdModifier { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public List<string> TraceIds { get; set; } = new();
 }
