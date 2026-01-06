@@ -9,15 +9,18 @@ public class ExogenousDecisionLogBuilder
     private readonly DecisionInputsExogenousRepository _decisionInputsRepository;
     private readonly NarrativeRepository _narrativeRepository;
     private readonly ExogenousItemRepository _itemRepository;
+    private readonly ExogenousClassificationRepository _classificationRepository;
 
     public ExogenousDecisionLogBuilder(
         DecisionInputsExogenousRepository decisionInputsRepository,
         NarrativeRepository narrativeRepository,
-        ExogenousItemRepository itemRepository)
+        ExogenousItemRepository itemRepository,
+        ExogenousClassificationRepository classificationRepository)
     {
         _decisionInputsRepository = decisionInputsRepository;
         _narrativeRepository = narrativeRepository;
         _itemRepository = itemRepository;
+        _classificationRepository = classificationRepository;
     }
 
     public async Task<(string traceJson, string summary)> BuildLatestAsync()
@@ -48,11 +51,47 @@ public class ExogenousDecisionLogBuilder
 
         var narratives = await _narrativeRepository.GetByIdsAsync(narrativeIds);
         var items = await _itemRepository.GetItemsByIdsAsync(itemIds);
+        var classifications = await _classificationRepository.GetByItemIdsAsync(itemIds);
+        var classificationByItem = classifications.ToDictionary(c => c.ItemId, c => c);
+        var itemContributionById = new Dictionary<Guid, ExogenousItemContribution>();
+
+        foreach (var item in items)
+        {
+            if (!classificationByItem.TryGetValue(item.Id, out var classification))
+            {
+                continue;
+            }
+
+            var contribution = ExogenousScoring.ComputeContribution(item, classification, Guid.Empty, latest.TimestampUtc);
+            if (contribution == null)
+            {
+                continue;
+            }
+
+            itemContributionById[item.Id] = contribution;
+        }
+
+        var themeStrength = JsonSerializer.Deserialize<Dictionary<string, decimal>>(latest.ThemeStrengthJson)
+            ?? new Dictionary<string, decimal>();
+        var themeDirection = JsonSerializer.Deserialize<Dictionary<string, string>>(latest.ThemeDirectionJson)
+            ?? new Dictionary<string, string>();
+        var themeConflict = JsonSerializer.Deserialize<Dictionary<string, decimal>>(latest.ThemeConflictJson)
+            ?? new Dictionary<string, decimal>();
+        var marketAlignment = JsonSerializer.Deserialize<Dictionary<string, string>>(latest.MarketAlignmentJson)
+            ?? new Dictionary<string, string>();
+        var gatingReasons = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(latest.GatingReasonJson)
+            ?? new Dictionary<string, List<string>>();
 
         var trace = new ExogenousDecisionTrace
         {
+            ThemeStrength = themeStrength,
+            ThemeDirection = themeDirection,
+            ThemeConflict = themeConflict,
+            MarketAlignment = marketAlignment,
+            GatingReasons = gatingReasons,
             AbstainModifier = latest.AbstainModifier,
             ConfidenceThresholdModifier = latest.ConfidenceThresholdModifier,
+            PositionSizeModifier = latest.PositionSizeModifier,
             WhyBullets = SplitNotes(latest.Notes),
             Narratives = narratives.Select(n => new ExogenousNarrativeTrace
             {
@@ -69,7 +108,14 @@ public class ExogenousDecisionLogBuilder
                 Title = i.Title,
                 SourceId = i.SourceId,
                 PublishedAt = i.PublishedAt,
-                Url = i.Url
+                Url = i.Url,
+                Contribution = itemContributionById.TryGetValue(i.Id, out var contribution) ? contribution.Contribution : 0m,
+                SourceCredibilityWeight = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.SourceWeight : 0m,
+                ConfidenceScore = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.ConfidenceWeight : 0m,
+                HorizonWeight = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.HorizonWeight : 0m,
+                TimeDecay = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.TimeDecay : 0m,
+                DirectionalBias = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.DirectionalBias : ExogenousDirectionalBias.NEUTRAL,
+                ImpactHorizon = itemContributionById.TryGetValue(i.Id, out contribution) ? contribution.ImpactHorizon : ExogenousImpactHorizon.NOISE
             }).ToList()
         };
 

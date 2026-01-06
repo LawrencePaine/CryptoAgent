@@ -380,13 +380,42 @@ namespace backend.Migrations
                     b.Property<decimal>("ConfidenceThresholdModifier")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("GatingReasonJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("MarketAlignmentJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("PositionSizeModifier")
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(1m);
+
                     b.Property<string>("ThemeScoresJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ThemeConflictJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("ThemeDirectionJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("ThemeStrengthJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
 
                     b.Property<string>("TraceIdsJson")
                         .IsRequired()

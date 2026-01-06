@@ -104,9 +104,15 @@ public class LlmIndicatorsState
 public class LlmExogenousState
 {
     public Dictionary<string, decimal> ThemeScores { get; set; } = new();
+    public Dictionary<string, decimal> ThemeStrength { get; set; } = new();
+    public Dictionary<string, string> ThemeDirection { get; set; } = new();
+    public Dictionary<string, decimal> ThemeConflict { get; set; } = new();
     public Dictionary<string, string> AlignmentFlags { get; set; } = new();
+    public Dictionary<string, string> MarketAlignment { get; set; } = new();
+    public Dictionary<string, List<string>> GatingReasons { get; set; } = new();
     public decimal AbstainModifier { get; set; }
     public decimal ConfidenceThresholdModifier { get; set; }
+    public decimal PositionSizeModifier { get; set; } = 1m;
     public string Notes { get; set; } = string.Empty;
     public List<string> TraceIds { get; set; } = new();
 }
