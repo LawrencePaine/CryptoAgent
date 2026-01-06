@@ -32,15 +32,15 @@ public class ExogenousDecisionLogBuilder
         var narrativeIds = new List<Guid>();
         var itemIds = new List<Guid>();
 
-        foreach (var trace in traceIds)
+        foreach (var traceId in traceIds)
         {
-            if (trace.StartsWith("narrative:", StringComparison.OrdinalIgnoreCase)
-                && Guid.TryParse(trace["narrative:".Length..], out var narrativeId))
+            if (traceId.StartsWith("narrative:", StringComparison.OrdinalIgnoreCase)
+                && Guid.TryParse(traceId["narrative:".Length..], out var narrativeId))
             {
                 narrativeIds.Add(narrativeId);
             }
-            else if (trace.StartsWith("item:", StringComparison.OrdinalIgnoreCase)
-                && Guid.TryParse(trace["item:".Length..], out var itemId))
+            else if (traceId.StartsWith("item:", StringComparison.OrdinalIgnoreCase)
+                && Guid.TryParse(traceId["item:".Length..], out var itemId))
             {
                 itemIds.Add(itemId);
             }

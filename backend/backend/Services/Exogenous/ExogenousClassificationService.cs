@@ -109,37 +109,37 @@ public class ExogenousClassificationService : IExogenousClassifier
             new UserChatMessage(prompt)
         }, null, ct);
 
-        return completion.Content[0].Text.Replace("```json", "").Replace("```", "").Trim();
+        return completion.Value.Content[0].Text.Replace("```json", "").Replace("```", "").Trim();
     }
 
     private static string BuildPrompt(ExogenousItemEntity item)
     {
         return $@"Classify the following news item into exogenous themes.
 
-Rules:
-- Use only the text provided.
-- No price predictions.
-- Provide 3-6 concise bullet summaries.
-- Provide 2-8 key entities.
-- theme_relevance must be AI_COMPUTE, ETH_ECOSYSTEM, or NONE.
-- impact_horizon must be NOISE, TRANSITIONAL, or STRUCTURAL.
-- directional_bias must be SUPPORTIVE, ADVERSE, or NEUTRAL.
-- confidence_score must be 0 to 1.
-- cite what in the text implies the classification.
+        Rules:
+        - Use only the text provided.
+        - No price predictions.
+        - Provide 3-6 concise bullet summaries.
+        - Provide 2-8 key entities.
+        - theme_relevance must be AI_COMPUTE, ETH_ECOSYSTEM, or NONE.
+        - impact_horizon must be NOISE, TRANSITIONAL, or STRUCTURAL.
+        - directional_bias must be SUPPORTIVE, ADVERSE, or NEUTRAL.
+        - confidence_score must be 0 to 1.
+        - cite what in the text implies the classification.
 
-Return JSON only matching this schema:
-{{
-  "theme_relevance": "AI_COMPUTE",
-  "impact_horizon": "STRUCTURAL",
-  "directional_bias": "SUPPORTIVE",
-  "confidence_score": 0.74,
-  "summary_bullets": ["..."],
-  "key_entities": ["..."]
-}}
+        Return JSON only matching this schema:
+        {{
+          ""theme_relevance"": ""AI_COMPUTE"",
+          ""impact_horizon"": ""STRUCTURAL"",
+          ""directional_bias"": ""SUPPORTIVE"",
+          ""confidence_score"": 0.74,
+          ""summary_bullets"": [""...""],
+          ""key_entities"": [""...""]
+        }}
 
-TITLE: {item.Title}
-EXCERPT: {item.RawExcerpt}
-SOURCE_ID: {item.SourceId}";
+        TITLE: {item.Title}
+        EXCERPT: {item.RawExcerpt}
+        SOURCE_ID: {item.SourceId}";
     }
 
     private static ExogenousClassifierResult? ParseResult(string payload)

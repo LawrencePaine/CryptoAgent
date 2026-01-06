@@ -22,9 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="exogenous.sources.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>

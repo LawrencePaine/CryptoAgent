@@ -370,11 +370,11 @@ namespace backend.Migrations
                     b.Property<DateTime>("TimestampUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AlignmentFlagsJson")
-                        .IsRequired()
+                    b.Property<decimal>("AbstainModifier")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("AbstainModifier")
+                    b.Property<string>("AlignmentFlagsJson")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("ConfidenceThresholdModifier")
@@ -403,6 +403,7 @@ namespace backend.Migrations
             modelBuilder.Entity("CryptoAgent.Api.Data.Entities.ExogenousClassificationEntity", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("ConfidenceScore")
@@ -451,6 +452,7 @@ namespace backend.Migrations
             modelBuilder.Entity("CryptoAgent.Api.Data.Entities.ExogenousItemEntity", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ContentHash")
@@ -477,11 +479,11 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SourceId")
-                        .IsRequired()
+                    b.Property<decimal>("SourceCredibilityWeight")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("SourceCredibilityWeight")
+                    b.Property<string>("SourceId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
@@ -506,75 +508,6 @@ namespace backend.Migrations
                         .IsUnique();
 
                     b.ToTable("ExogenousItems", (string)null);
-                });
-
-            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.NarrativeEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DirectionalBias")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Horizon")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("LastUpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SeedText")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("StateScore")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Theme")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LastUpdatedAt");
-
-                    b.HasIndex("Theme");
-
-                    b.ToTable("Narratives", (string)null);
-                });
-
-            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.NarrativeItemEntity", b =>
-                {
-                    b.Property<Guid>("NarrativeId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("AddedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("ContributionWeight")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ItemId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("NarrativeId", "ItemId");
-
-                    b.HasIndex("ItemId");
-
-                    b.HasIndex("NarrativeId");
-
-                    b.ToTable("NarrativeItems", (string)null);
                 });
 
             modelBuilder.Entity("CryptoAgent.Api.Data.Entities.HourlyCandleEntity", b =>
@@ -671,6 +604,76 @@ namespace backend.Migrations
                         .IsUnique();
 
                     b.ToTable("HourlyFeatures", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.NarrativeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DirectionalBias")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Horizon")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SeedText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("StateScore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastUpdatedAt");
+
+                    b.HasIndex("Theme");
+
+                    b.ToTable("Narratives", (string)null);
+                });
+
+            modelBuilder.Entity("CryptoAgent.Api.Data.Entities.NarrativeItemEntity", b =>
+                {
+                    b.Property<Guid>("NarrativeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ContributionWeight")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NarrativeId", "ItemId");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("NarrativeId");
+
+                    b.ToTable("NarrativeItems", (string)null);
                 });
 
             modelBuilder.Entity("CryptoAgent.Api.Data.Entities.RegimeStateEntity", b =>
