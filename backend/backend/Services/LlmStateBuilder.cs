@@ -104,9 +104,15 @@ public class LlmStateBuilder
             state.Exogenous = new LlmExogenousState
             {
                 ThemeScores = dto.ThemeScores,
+                ThemeStrength = dto.ThemeStrength,
+                ThemeDirection = dto.ThemeDirection,
+                ThemeConflict = dto.ThemeConflict,
                 AlignmentFlags = dto.AlignmentFlags,
+                MarketAlignment = dto.MarketAlignment,
+                GatingReasons = dto.GatingReasons,
                 AbstainModifier = dto.AbstainModifier,
                 ConfidenceThresholdModifier = dto.ConfidenceThresholdModifier,
+                PositionSizeModifier = dto.PositionSizeModifier,
                 Notes = dto.Notes,
                 TraceIds = dto.TraceIds
             };

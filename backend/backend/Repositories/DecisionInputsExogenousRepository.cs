@@ -27,9 +27,15 @@ public class DecisionInputsExogenousRepository
         else
         {
             existing.ThemeScoresJson = entity.ThemeScoresJson;
+            existing.ThemeStrengthJson = entity.ThemeStrengthJson;
+            existing.ThemeDirectionJson = entity.ThemeDirectionJson;
+            existing.ThemeConflictJson = entity.ThemeConflictJson;
             existing.AlignmentFlagsJson = entity.AlignmentFlagsJson;
+            existing.MarketAlignmentJson = entity.MarketAlignmentJson;
+            existing.GatingReasonJson = entity.GatingReasonJson;
             existing.AbstainModifier = entity.AbstainModifier;
             existing.ConfidenceThresholdModifier = entity.ConfidenceThresholdModifier;
+            existing.PositionSizeModifier = entity.PositionSizeModifier;
             existing.Notes = entity.Notes;
             existing.TraceIdsJson = entity.TraceIdsJson;
         }
@@ -56,8 +62,22 @@ public class DecisionInputsExogenousRepository
     {
         var themeScores = JsonSerializer.Deserialize<Dictionary<string, decimal>>(entity.ThemeScoresJson)
             ?? new Dictionary<string, decimal>();
+        var themeStrength = JsonSerializer.Deserialize<Dictionary<string, decimal>>(entity.ThemeStrengthJson)
+            ?? new Dictionary<string, decimal>();
+        if (themeStrength.Count == 0 && themeScores.Count > 0)
+        {
+            themeStrength = new Dictionary<string, decimal>(themeScores);
+        }
+        var themeDirection = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.ThemeDirectionJson)
+            ?? new Dictionary<string, string>();
+        var themeConflict = JsonSerializer.Deserialize<Dictionary<string, decimal>>(entity.ThemeConflictJson)
+            ?? new Dictionary<string, decimal>();
         var alignment = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.AlignmentFlagsJson)
             ?? new Dictionary<string, string>();
+        var marketAlignment = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.MarketAlignmentJson)
+            ?? new Dictionary<string, string>();
+        var gatingReasons = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(entity.GatingReasonJson)
+            ?? new Dictionary<string, List<string>>();
         var traceIds = JsonSerializer.Deserialize<List<string>>(entity.TraceIdsJson)
             ?? new List<string>();
 
@@ -65,9 +85,15 @@ public class DecisionInputsExogenousRepository
         {
             TimestampUtc = entity.TimestampUtc,
             ThemeScores = themeScores,
+            ThemeStrength = themeStrength,
+            ThemeDirection = themeDirection,
+            ThemeConflict = themeConflict,
             AlignmentFlags = alignment,
+            MarketAlignment = marketAlignment,
+            GatingReasons = gatingReasons,
             AbstainModifier = entity.AbstainModifier,
             ConfidenceThresholdModifier = entity.ConfidenceThresholdModifier,
+            PositionSizeModifier = entity.PositionSizeModifier,
             Notes = entity.Notes,
             TraceIds = traceIds
         };
