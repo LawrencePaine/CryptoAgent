@@ -7,6 +7,7 @@ import { LastDecisionCard } from "./components/LastDecisionCard";
 import { RecentTradesTable } from "./components/RecentTradesTable";
 import { RecentDecisionsList } from "./components/RecentDecisionsList";
 import { MonthlyPerformanceSection } from "./components/MonthlyPerformance";
+import { ExogenousDecisionTracePanel } from "./components/ExogenousDecisionTracePanel";
 
 function App() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -155,6 +156,8 @@ function App() {
                 </div>
               </div>
             )}
+
+            {dashboard.exogenousTrace && <ExogenousDecisionTracePanel trace={dashboard.exogenousTrace} />}
 
             <div className="grid grid-cols-1">
               <RecentDecisionsList decisions={dashboard.recentDecisions || []} />

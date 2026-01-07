@@ -1,6 +1,7 @@
 using CryptoAgent.Api.Models;
 using CryptoAgent.Api.Repositories;
 using CryptoAgent.Api.Services;
+using CryptoAgent.Api.Services.Exogenous;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 
@@ -15,19 +16,22 @@ public class DashboardController : ControllerBase
     private readonly AgentService _agentService;
     private readonly DecisionRepository _decisionRepository;
     private readonly PortfolioValuationService _valuationService;
+    private readonly IExogenousTraceService _exogenousTraceService;
 
     public DashboardController(
         PortfolioRepository portfolioRepository,
         MarketDataService marketDataService,
         AgentService agentService,
         DecisionRepository decisionRepository,
-        PortfolioValuationService valuationService)
+        PortfolioValuationService valuationService,
+        IExogenousTraceService exogenousTraceService)
     {
         _portfolioRepository = portfolioRepository;
         _marketDataService = marketDataService;
         _agentService = agentService;
         _decisionRepository = decisionRepository;
         _valuationService = valuationService;
+        _exogenousTraceService = exogenousTraceService;
     }
 
     [HttpGet]
@@ -41,6 +45,7 @@ public class DashboardController : ControllerBase
         var valuation = _valuationService.Calculate(portfolio, market);
         var dto = portfolio.ToDto(valuation);
 
+        var tickUtc = NormalizeTickUtc(lastDecision?.TimestampUtc ?? DateTime.UtcNow);
         var response = new DashboardResponse
         {
             Portfolio = dto,
@@ -48,10 +53,22 @@ public class DashboardController : ControllerBase
             LastDecision = lastDecision,
             RecentTrades = recentTrades,
             RecentDecisions = recentDecisions,
-            PositionCommentary = GenerateCommentary(dto, lastDecision, recentTrades)
+            PositionCommentary = GenerateCommentary(dto, lastDecision, recentTrades),
+            ExogenousTrace = await _exogenousTraceService.GetTraceAsync(tickUtc)
         };
 
         return Ok(response);
+    }
+
+    private static DateTime NormalizeTickUtc(DateTime tickUtc)
+    {
+        var utc = tickUtc.Kind == DateTimeKind.Utc
+            ? tickUtc
+            : tickUtc.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(tickUtc, DateTimeKind.Utc)
+                : tickUtc.ToUniversalTime();
+
+        return new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, 0, 0, DateTimeKind.Utc);
     }
     private static string GenerateCommentary(PortfolioDto p, LastDecision? lastDecision, List<Trade> recentTrades)
     {

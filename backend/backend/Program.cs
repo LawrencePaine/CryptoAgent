@@ -132,6 +132,7 @@ builder.Services.AddScoped<ExogenousIngestionService>();
 builder.Services.AddScoped<ExogenousNarrativeAggregator>();
 builder.Services.AddScoped<ExogenousDecisionInputsPublisher>();
 builder.Services.AddScoped<ExogenousDecisionLogBuilder>();
+builder.Services.AddScoped<IExogenousTraceService, ExogenousTraceService>();
 builder.Services.AddScoped<IExogenousClassifier, ExogenousClassificationService>();
 builder.Services.AddScoped<ExogenousIngestionJob>();
 builder.Services.AddScoped<ExogenousClassificationJob>();

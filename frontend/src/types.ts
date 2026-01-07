@@ -66,6 +66,54 @@ export type DashboardResponse = {
   recentTrades: Trade[];
   recentDecisions: LastDecision[];
   positionCommentary: string;
+  exogenousTrace?: ExogenousDecisionTrace | null;
+};
+
+export type ExogenousDecisionTrace = {
+  tickUtc: string;
+  themes: ThemeSummary[];
+  marketAlignment: Record<string, string>;
+  modifiers: Modifiers;
+  gatingReasons: string[];
+  topNarratives: NarrativeTrace[];
+  topItems: ItemTrace[];
+};
+
+export type ThemeSummary = {
+  theme: string;
+  strength: number;
+  direction: string;
+  conflict: number;
+};
+
+export type Modifiers = {
+  abstainModifier: number;
+  confidenceThresholdModifier: number;
+  positionSizeModifier?: number | null;
+};
+
+export type NarrativeTrace = {
+  id: string;
+  theme: string;
+  label: string;
+  stateScore: number;
+  direction: string;
+  horizon: string;
+  lastUpdatedUtc: string;
+  itemCount: number;
+};
+
+export type ItemTrace = {
+  id: string;
+  publishedAtUtc: string;
+  sourceId: string;
+  title: string;
+  url: string;
+  theme: string;
+  impactHorizon: string;
+  directionalBias: string;
+  confidenceScore: number;
+  contributionWeight?: number | null;
 };
 
 export type MonthlyPerformance = {
