@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CryptoAgent.Api.Models.Exogenous;
 
 namespace CryptoAgent.Api.Models;
 
@@ -166,6 +167,7 @@ public class DashboardResponse
     public List<Trade> RecentTrades { get; set; } = new();
     public List<LastDecision> RecentDecisions { get; set; } = new();
     public string PositionCommentary { get; set; } = string.Empty;
+    public ExogenousDecisionTraceDto? ExogenousTrace { get; set; }
 }
 
 public class PerformanceSnapshot

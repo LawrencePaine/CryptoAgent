@@ -50,6 +50,13 @@ public class DecisionInputsExogenousRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<DecisionInputsExogenousEntity?> GetByTimestampAsync(DateTime timestampUtc)
+    {
+        return await _dbContext.DecisionInputsExogenous
+            .Where(d => d.TimestampUtc == timestampUtc)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<List<DecisionInputsExogenousEntity>> GetRangeAsync(DateTime fromUtc, DateTime toUtc)
     {
         return await _dbContext.DecisionInputsExogenous
