@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { LastDecision } from "../types";
 
 export function LastDecisionCard({ decision }: { decision: LastDecision | null }) {
@@ -107,6 +107,46 @@ export function LastDecisionCard({ decision }: { decision: LastDecision | null }
                     )}
                 </div>
             )}
+
+            <div className="mt-auto pt-4 border-t border-white/5 flex justify-between items-center text-xs">
+                <span className="text-gray-600 font-mono">
+                    ID: {new Date(decision.timestampUtc).getTime().toString(36).toUpperCase().substring(0, 8)}
+                </span>
+                <NextDecisionIndicator />
+            </div>
         </div>
+    );
+}
+
+function NextDecisionIndicator() {
+    const [nextDecision, setNextDecision] = useState<string>("");
+
+    useEffect(() => {
+        const update = () => {
+            const now = new Date();
+            const next = new Date(now);
+            next.setMinutes(5, 0, 0);
+
+            if (next <= now) {
+                next.setHours(next.getHours() + 1);
+            }
+
+            const diff = next.getTime() - now.getTime();
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            setNextDecision(`${minutes}m ${seconds}s`);
+        };
+
+        update();
+        const timer = setInterval(update, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <span className="text-gray-500 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 animate-pulse" />
+            Next: {nextDecision}
+        </span>
     );
 }
