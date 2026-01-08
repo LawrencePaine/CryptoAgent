@@ -15,18 +15,20 @@ public class NarrativeRepository
 
     public async Task<List<NarrativeEntity>> GetActiveByThemeAsync(string theme, DateTime windowStart)
     {
-        return await _dbContext.Narratives
+        var entities = await _dbContext.Narratives
             .Where(n => n.Theme == theme && n.LastUpdatedAt >= windowStart)
-            .OrderByDescending(n => n.StateScore)
             .ToListAsync();
+
+        return entities.OrderByDescending(n => n.StateScore).ToList();
     }
 
     public async Task<List<NarrativeEntity>> GetActiveNarrativesAsync(DateTime windowStart)
     {
-        return await _dbContext.Narratives
+        var entities = await _dbContext.Narratives
             .Where(n => n.LastUpdatedAt >= windowStart && n.IsActive)
-            .OrderByDescending(n => n.StateScore)
             .ToListAsync();
+
+        return entities.OrderByDescending(n => n.StateScore).ToList();
     }
 
     public async Task AddAsync(NarrativeEntity entity)
