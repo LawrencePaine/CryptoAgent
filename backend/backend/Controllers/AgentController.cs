@@ -17,6 +17,7 @@ public class AgentController : ControllerBase
     private readonly DecisionRepository _decisionRepository;
     private readonly PortfolioValuationService _valuationService;
     private readonly IExogenousTraceService _exogenousTraceService;
+    private readonly DecisionInputsExogenousRepository _decisionInputsRepository;
 
     public AgentController(
         AgentService agentService,
@@ -24,7 +25,8 @@ public class AgentController : ControllerBase
         MarketDataService marketDataService,
         DecisionRepository decisionRepository,
         PortfolioValuationService valuationService,
-        IExogenousTraceService exogenousTraceService)
+        IExogenousTraceService exogenousTraceService,
+        DecisionInputsExogenousRepository decisionInputsRepository)
     {
         _agentService = agentService;
         _portfolioRepository = portfolioRepository;
@@ -32,6 +34,7 @@ public class AgentController : ControllerBase
         _decisionRepository = decisionRepository;
         _valuationService = valuationService;
         _exogenousTraceService = exogenousTraceService;
+        _decisionInputsRepository = decisionInputsRepository;
     }
 
     [HttpPost("run-once")]
@@ -42,11 +45,12 @@ public class AgentController : ControllerBase
         // Return updated dashboard
         var portfolio = await _portfolioRepository.GetAsync();
         var market = await _marketDataService.GetSnapshotAsync();
-        var recentTrades = await _portfolioRepository.GetRecentTradesAsync(20);
+        var recentTrades = await _portfolioRepository.GetRecentTradesAsync(20, PortfolioBook.Agent);
         var recentDecisions = await _decisionRepository.GetRecentDecisionsAsync(10);
         var lastDecision = recentDecisions.FirstOrDefault() ?? _agentService.LastDecision;
         var valuation = _valuationService.Calculate(portfolio, market);
         var dto = portfolio.ToDto(valuation);
+        var lastExogenous = await _decisionInputsRepository.GetLatestAsync();
 
         var tickUtc = NormalizeTickUtc(lastDecision?.TimestampUtc ?? DateTime.UtcNow);
         var response = new DashboardResponse
@@ -57,7 +61,8 @@ public class AgentController : ControllerBase
             RecentTrades = recentTrades,
             RecentDecisions = recentDecisions,
             PositionCommentary = GenerateCommentary(dto, lastDecision, recentTrades),
-            ExogenousTrace = await _exogenousTraceService.GetTraceAsync(tickUtc)
+            ExogenousTrace = await _exogenousTraceService.GetTraceAsync(tickUtc),
+            ExogenousLastSyncUtc = lastExogenous?.TimestampUtc
         };
 
         return Ok(response);

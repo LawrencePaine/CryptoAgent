@@ -838,6 +838,12 @@ namespace backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Book")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("AGENT");
+
                     b.Property<decimal>("BtcAmount")
                         .HasColumnType("TEXT");
 
@@ -868,6 +874,9 @@ namespace backend.Migrations
                     b.HasIndex("Id")
                         .IsUnique();
 
+                    b.HasIndex("Book")
+                        .IsUnique();
+
                     b.ToTable("Portfolios", (string)null);
                 });
 
@@ -889,6 +898,12 @@ namespace backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValue(0m);
+
+                    b.Property<string>("Book")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("AGENT");
 
                     b.Property<decimal>("FeeGbp")
                         .HasColumnType("TEXT");

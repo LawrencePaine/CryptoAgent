@@ -64,6 +64,9 @@ public enum RawActionType { Buy, Sell, Hold }
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AssetType { Btc, Eth, None }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PortfolioBook { Agent, Manual }
+
 public class Trade
 {
     public DateTime TimestampUtc { get; set; }
@@ -74,6 +77,7 @@ public class Trade
     public decimal PriceGbp { get; set; }
     public decimal FeeGbp { get; set; }
     public string Mode { get; set; } = "PAPER";
+    public PortfolioBook Book { get; set; } = PortfolioBook.Agent;
 }
 
 public class LastDecision
@@ -168,6 +172,7 @@ public class DashboardResponse
     public List<LastDecision> RecentDecisions { get; set; } = new();
     public string PositionCommentary { get; set; } = string.Empty;
     public ExogenousDecisionTraceDto? ExogenousTrace { get; set; }
+    public DateTime? ExogenousLastSyncUtc { get; set; }
 }
 
 public class PerformanceSnapshot
