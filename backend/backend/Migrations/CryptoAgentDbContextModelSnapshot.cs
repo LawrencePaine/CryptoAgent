@@ -871,10 +871,10 @@ namespace backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Id")
+                    b.HasIndex("Book")
                         .IsUnique();
 
-                    b.HasIndex("Book")
+                    b.HasIndex("Id")
                         .IsUnique();
 
                     b.ToTable("Portfolios", (string)null);

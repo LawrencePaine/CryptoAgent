@@ -125,7 +125,7 @@ builder.Services.AddSingleton<RiskEngine>();
 builder.Services.AddSingleton<AgentService>();
 builder.Services.AddSingleton<HourlyFeatureCalculator>();
 builder.Services.AddSingleton<RegimeClassifier>();
-builder.Services.AddSingleton<PaperTradeExecutionService>();
+builder.Services.AddScoped<PaperTradeExecutionService>();
 builder.Services.AddSingleton<ExogenousSourceRegistry>();
 builder.Services.AddSingleton<IExogenousSourceClient, RssSourceClient>();
 builder.Services.AddSingleton<IExogenousSourceClient, CuratedLinkSourceClient>();

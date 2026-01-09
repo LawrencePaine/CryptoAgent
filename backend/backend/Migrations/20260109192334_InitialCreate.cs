@@ -120,9 +120,15 @@ namespace backend.Migrations
                 {
                     TimestampUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ThemeScoresJson = table.Column<string>(type: "TEXT", nullable: false),
+                    ThemeStrengthJson = table.Column<string>(type: "TEXT", nullable: false),
+                    ThemeDirectionJson = table.Column<string>(type: "TEXT", nullable: false),
+                    ThemeConflictJson = table.Column<string>(type: "TEXT", nullable: false),
                     AlignmentFlagsJson = table.Column<string>(type: "TEXT", nullable: false),
+                    MarketAlignmentJson = table.Column<string>(type: "TEXT", nullable: false),
+                    GatingReasonJson = table.Column<string>(type: "TEXT", nullable: false),
                     AbstainModifier = table.Column<decimal>(type: "TEXT", nullable: false),
                     ConfidenceThresholdModifier = table.Column<decimal>(type: "TEXT", nullable: false),
+                    PositionSizeModifier = table.Column<decimal>(type: "TEXT", nullable: false),
                     Notes = table.Column<string>(type: "TEXT", nullable: false),
                     TraceIdsJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
@@ -332,6 +338,7 @@ namespace backend.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    Book = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "AGENT"),
                     CashGbp = table.Column<decimal>(type: "TEXT", nullable: false),
                     BtcAmount = table.Column<decimal>(type: "TEXT", nullable: false),
                     EthAmount = table.Column<decimal>(type: "TEXT", nullable: false),
@@ -394,7 +401,8 @@ namespace backend.Migrations
                     SizeGbp = table.Column<decimal>(type: "TEXT", nullable: false),
                     PriceGbp = table.Column<decimal>(type: "TEXT", nullable: false),
                     FeeGbp = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Mode = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "PAPER")
+                    Mode = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "PAPER"),
+                    Book = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "AGENT")
                 },
                 constraints: table =>
                 {
@@ -486,6 +494,12 @@ namespace backend.Migrations
                 name: "IX_Narratives_Theme",
                 table: "Narratives",
                 column: "Theme");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Portfolios_Book",
+                table: "Portfolios",
+                column: "Book",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Portfolios_Id",
