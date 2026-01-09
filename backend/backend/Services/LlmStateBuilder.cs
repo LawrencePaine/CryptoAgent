@@ -37,8 +37,8 @@ public class LlmStateBuilder
     {
         var valuation = _valuationService.Calculate(portfolio, market);
 
-        var recentTrades = await _portfolioRepository.GetRecentTradesAsync(10);
-        var tradesToday = await _portfolioRepository.CountTradesTodayAsync();
+        var recentTrades = await _portfolioRepository.GetRecentTradesAsync(10, PortfolioBook.Agent);
+        var tradesToday = await _portfolioRepository.CountTradesTodayAsync(PortfolioBook.Agent);
         var recentDecisions = await _decisionRepository.GetRecentDecisionsAsync(10);
         var exogenous = await _exogenousRepository.GetLatestAsync();
 

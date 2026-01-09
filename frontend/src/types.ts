@@ -57,6 +57,7 @@ export type Trade = {
   sizeGbp: number;
   priceGbp: number;
   mode: "PAPER" | "LIVE";
+  book?: "Agent" | "Manual" | "AGENT" | "MANUAL";
 };
 
 export type DashboardResponse = {
@@ -67,6 +68,7 @@ export type DashboardResponse = {
   recentDecisions: LastDecision[];
   positionCommentary: string;
   exogenousTrace?: ExogenousDecisionTrace | null;
+  exogenousLastSyncUtc?: string | null;
 };
 
 export type ExogenousDecisionTrace = {
@@ -125,4 +127,50 @@ export type MonthlyPerformance = {
   aiCostGbp: number;
   netAfterAiGbp: number;
   vaultEndGbp: number;
+};
+
+export type ExogenousRefreshResultSummary = {
+  tickUtc: string;
+  itemsIngested: number;
+  itemsClassified: number;
+  narrativesAggregated: number;
+  durationMs: number;
+};
+
+export type ExogenousRefreshJobStatus = {
+  jobId: string;
+  status: "Queued" | "Running" | "Succeeded" | "Failed";
+  queuedUtc?: string | null;
+  startedUtc?: string | null;
+  finishedUtc?: string | null;
+  resultSummary?: ExogenousRefreshResultSummary | null;
+  error?: string | null;
+};
+
+export type ManualTradeRequest = {
+  asset: "BTC" | "ETH";
+  action: "BUY" | "SELL";
+  sizeGbp: number;
+};
+
+export type ManualTradeResponse = {
+  portfolio: PortfolioDto;
+  trade: Trade;
+  market: MarketSnapshot;
+};
+
+export type BookPerformanceSummary = {
+  equity: number;
+  netProfit: number;
+  netProfitPct: number;
+  fees: number;
+  maxDrawdownPct: number;
+  tradeCount: number;
+};
+
+export type PerformanceCompareResponse = {
+  fromUtc: string;
+  toUtc: string;
+  agent: BookPerformanceSummary;
+  manual: BookPerformanceSummary;
 };

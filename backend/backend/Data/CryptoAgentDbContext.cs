@@ -38,6 +38,8 @@ public class CryptoAgentDbContext : DbContext
             entity.ToTable("Portfolios");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Id).IsUnique();
+            entity.HasIndex(e => e.Book).IsUnique();
+            entity.Property(e => e.Book).HasDefaultValue("AGENT");
             entity.Property(e => e.BtcCostBasisGbp).HasDefaultValue(0);
             entity.Property(e => e.EthCostBasisGbp).HasDefaultValue(0);
         });
@@ -50,6 +52,7 @@ public class CryptoAgentDbContext : DbContext
             entity.Property(e => e.Action).IsRequired();
             entity.Property(e => e.AssetAmount).HasDefaultValue(0);
             entity.Property(e => e.Mode).HasDefaultValue("PAPER");
+            entity.Property(e => e.Book).HasDefaultValue("AGENT");
         });
 
         modelBuilder.Entity<PerformanceSnapshotEntity>(entity =>
@@ -201,6 +204,7 @@ public class CryptoAgentDbContext : DbContext
 public class PortfolioEntity
 {
     public int Id { get; set; }
+    public string Book { get; set; } = "AGENT";
     public decimal CashGbp { get; set; }
     public decimal BtcAmount { get; set; }
     public decimal EthAmount { get; set; }
@@ -221,6 +225,7 @@ public class TradeEntity
     public decimal PriceGbp { get; set; }
     public decimal FeeGbp { get; set; }
     public string Mode { get; set; } = "PAPER";
+    public string Book { get; set; } = "AGENT";
 }
 
 public class PerformanceSnapshotEntity

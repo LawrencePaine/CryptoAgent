@@ -13,14 +13,15 @@ public class PortfolioRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Portfolio> GetAsync()
+    public async Task<Portfolio> GetAsync(PortfolioBook book = PortfolioBook.Agent)
     {
-        var entity = await _dbContext.Portfolios.FirstOrDefaultAsync(p => p.Id == 1);
+        var bookKey = book.ToString().ToUpperInvariant();
+        var entity = await _dbContext.Portfolios.FirstOrDefaultAsync(p => p.Book == bookKey);
         if (entity == null)
         {
             entity = new PortfolioEntity
             {
-                Id = 1,
+                Book = bookKey,
                 CashGbp = 50m,
                 BtcAmount = 0,
                 EthAmount = 0,
@@ -36,12 +37,13 @@ public class PortfolioRepository
         return MapToDomain(entity);
     }
 
-    public async Task SaveAsync(Portfolio portfolio)
+    public async Task SaveAsync(Portfolio portfolio, PortfolioBook book = PortfolioBook.Agent)
     {
-        var entity = await _dbContext.Portfolios.FirstOrDefaultAsync(p => p.Id == 1);
+        var bookKey = book.ToString().ToUpperInvariant();
+        var entity = await _dbContext.Portfolios.FirstOrDefaultAsync(p => p.Book == bookKey);
         if (entity == null)
         {
-            entity = new PortfolioEntity { Id = 1 };
+            entity = new PortfolioEntity { Book = bookKey };
             _dbContext.Portfolios.Add(entity);
         }
 
@@ -67,16 +69,24 @@ public class PortfolioRepository
             SizeGbp = trade.SizeGbp,
             PriceGbp = trade.PriceGbp,
             FeeGbp = trade.FeeGbp,
-            Mode = trade.Mode
+            Mode = trade.Mode,
+            Book = trade.Book.ToString().ToUpperInvariant()
         };
 
         _dbContext.Trades.Add(entity);
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<List<Trade>> GetRecentTradesAsync(int count)
+    public async Task<List<Trade>> GetRecentTradesAsync(int count, PortfolioBook? book = null)
     {
-        var trades = await _dbContext.Trades
+        var query = _dbContext.Trades.AsQueryable();
+        if (book.HasValue)
+        {
+            var bookKey = book.Value.ToString().ToUpperInvariant();
+            query = query.Where(t => t.Book == bookKey);
+        }
+
+        var trades = await query
             .OrderByDescending(t => t.TimestampUtc)
             .Take(count)
             .ToListAsync();
@@ -84,15 +94,39 @@ public class PortfolioRepository
         return trades.Select(MapToDomain).ToList();
     }
 
-    public async Task<int> CountTradesTodayAsync()
+    public async Task<List<Trade>> GetTradesAsync(DateTime fromUtc, DateTime toUtc, PortfolioBook book)
     {
-        var today = DateTime.UtcNow.Date;
-        return await _dbContext.Trades.CountAsync(t => t.TimestampUtc.Date == today);
+        var bookKey = book.ToString().ToUpperInvariant();
+        var trades = await _dbContext.Trades
+            .Where(t => t.Book == bookKey && t.TimestampUtc >= fromUtc && t.TimestampUtc <= toUtc)
+            .OrderBy(t => t.TimestampUtc)
+            .ToListAsync();
+
+        return trades.Select(MapToDomain).ToList();
     }
 
-    public async Task<decimal> GetTotalFeesAsync()
+    public async Task<List<Trade>> GetTradesUpToAsync(DateTime toUtc, PortfolioBook book)
     {
-        var fees = await _dbContext.Trades.Select(t => t.FeeGbp).ToListAsync();
+        var bookKey = book.ToString().ToUpperInvariant();
+        var trades = await _dbContext.Trades
+            .Where(t => t.Book == bookKey && t.TimestampUtc <= toUtc)
+            .OrderBy(t => t.TimestampUtc)
+            .ToListAsync();
+
+        return trades.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> CountTradesTodayAsync(PortfolioBook book = PortfolioBook.Agent)
+    {
+        var today = DateTime.UtcNow.Date;
+        var bookKey = book.ToString().ToUpperInvariant();
+        return await _dbContext.Trades.CountAsync(t => t.TimestampUtc.Date == today && t.Book == bookKey);
+    }
+
+    public async Task<decimal> GetTotalFeesAsync(PortfolioBook book = PortfolioBook.Agent)
+    {
+        var bookKey = book.ToString().ToUpperInvariant();
+        var fees = await _dbContext.Trades.Where(t => t.Book == bookKey).Select(t => t.FeeGbp).ToListAsync();
         return fees.Sum();
     }
 
@@ -121,7 +155,8 @@ public class PortfolioRepository
             SizeGbp = entity.SizeGbp,
             PriceGbp = entity.PriceGbp,
             FeeGbp = entity.FeeGbp,
-            Mode = entity.Mode
+            Mode = entity.Mode,
+            Book = Enum.TryParse<PortfolioBook>(entity.Book, true, out var book) ? book : PortfolioBook.Agent
         };
     }
 }
