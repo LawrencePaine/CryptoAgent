@@ -3,10 +3,12 @@ namespace CryptoAgent.Api.Models.Exogenous;
 public class ExogenousDecisionTraceDto
 {
     public DateTime TickUtc { get; set; }
+    public string Summary { get; set; } = string.Empty;
     public List<ThemeSummaryDto> Themes { get; set; } = new();
     public Dictionary<string, string> MarketAlignment { get; set; } = new();
     public ModifiersDto Modifiers { get; set; } = new();
     public List<string> GatingReasons { get; set; } = new();
+    public List<WhyReasonDto> Why { get; set; } = new();
     public List<NarrativeDto> TopNarratives { get; set; } = new();
     public List<ItemDto> TopItems { get; set; } = new();
 }
@@ -24,6 +26,12 @@ public class ModifiersDto
     public double AbstainModifier { get; set; }
     public double ConfidenceThresholdModifier { get; set; }
     public double? PositionSizeModifier { get; set; }
+}
+
+public class WhyReasonDto
+{
+    public string Reason { get; set; } = string.Empty;
+    public string? Tag { get; set; }
 }
 
 public class NarrativeDto

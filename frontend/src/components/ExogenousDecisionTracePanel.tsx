@@ -26,6 +26,7 @@ const badgeTone = (value: string) => {
 
 export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePanelProps) {
   const tickLabel = new Date(trace.tickUtc).toLocaleString();
+  const whyReasons = trace.why && trace.why.length > 0 ? trace.why : trace.gatingReasons.map((reason) => ({ reason }));
 
   return (
     <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 p-6 rounded-2xl shadow-lg backdrop-blur-sm">
@@ -49,6 +50,11 @@ export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePan
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-3">
           <h4 className="text-indigo-200 text-sm font-semibold uppercase tracking-wide">Theme Summary</h4>
+          {trace.summary && (
+            <p className="text-indigo-100/90 text-sm leading-relaxed bg-indigo-500/10 border border-indigo-400/20 rounded-xl p-3">
+              {trace.summary}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {trace.themes.map((theme) => (
               <div
@@ -71,10 +77,10 @@ export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePan
           <h4 className="text-indigo-200 text-sm font-semibold uppercase tracking-wide">Modifiers</h4>
           <div className="flex flex-wrap gap-2">
             <span className="px-3 py-2 rounded-xl border border-indigo-400/20 bg-indigo-500/10 text-xs text-indigo-100">
-              Abstain {formatDelta(trace.modifiers.abstainModifier)}
+              Caution {formatDelta(trace.modifiers.abstainModifier)}
             </span>
             <span className="px-3 py-2 rounded-xl border border-indigo-400/20 bg-indigo-500/10 text-xs text-indigo-100">
-              Threshold {formatDelta(trace.modifiers.confidenceThresholdModifier)}
+              Confirmation {formatDelta(trace.modifiers.confidenceThresholdModifier)}
             </span>
             {trace.modifiers.positionSizeModifier !== null && trace.modifiers.positionSizeModifier !== undefined && (
               <span className="px-3 py-2 rounded-xl border border-indigo-400/20 bg-indigo-500/10 text-xs text-indigo-100">
@@ -83,12 +89,19 @@ export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePan
             )}
           </div>
 
-          <h4 className="text-indigo-200 text-sm font-semibold uppercase tracking-wide mt-4">Why</h4>
+          <h4 className="text-indigo-200 text-sm font-semibold uppercase tracking-wide mt-4">Why it mattered</h4>
           <ul className="list-disc list-inside text-indigo-100/90 text-sm space-y-1">
-            {trace.gatingReasons.length > 0 ? (
-              trace.gatingReasons.map((reason) => <li key={reason}>{reason}</li>)
+            {whyReasons.length > 0 ? (
+              whyReasons.map((reason) => (
+                <li key={`${reason.tag ?? "why"}-${reason.reason}`}>
+                  {reason.tag && (
+                    <span className="text-indigo-300 font-semibold mr-1">[{reason.tag}]</span>
+                  )}
+                  {reason.reason}
+                </li>
+              ))
             ) : (
-              <li>No gating reasons logged for this tick.</li>
+              <li>No high-confidence items influenced this tick.</li>
             )}
           </ul>
         </div>
@@ -123,7 +136,9 @@ export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePan
                 </div>
               ))
             ) : (
-              <p className="text-indigo-200/70 text-sm">No narratives captured for this tick.</p>
+              <p className="text-indigo-200/70 text-sm">
+                No active narratives for this tick (nothing strong enough to influence decisions).
+              </p>
             )}
           </div>
         </details>
@@ -166,7 +181,7 @@ export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePan
                 </div>
               ))
             ) : (
-              <p className="text-indigo-200/70 text-sm">No items captured for this tick.</p>
+              <p className="text-indigo-200/70 text-sm">No high-confidence items influenced this tick.</p>
             )}
           </div>
         </details>

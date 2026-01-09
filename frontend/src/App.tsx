@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import type {
   DashboardResponse,
-  ExogenousRefreshJobStatus,
+  ExogenousRefreshResponse,
   ManualTradeRequest,
   MonthlyPerformance,
   PerformanceCompareResponse,
@@ -19,6 +19,8 @@ import { ExogenousDecisionTracePanel } from "./components/ExogenousDecisionTrace
 import { ManualTradeTicket } from "./components/ManualTradeTicket";
 import { PerformanceComparisonPanel } from "./components/PerformanceComparisonPanel";
 import { TradeLogTable } from "./components/TradeLogTable";
+import { AgentBiasPanel } from "./components/AgentBiasPanel";
+import { ComparisonStrip } from "./components/ComparisonStrip";
 
 function App() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -27,8 +29,10 @@ function App() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"dashboard" | "simulator">("dashboard");
-  const [refreshStatus, setRefreshStatus] = useState<ExogenousRefreshJobStatus | null>(null);
+  const [refreshStatus, setRefreshStatus] = useState<ExogenousRefreshResponse | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshUtc, setLastRefreshUtc] = useState<string | null>(null);
   const [manualPortfolio, setManualPortfolio] = useState<PortfolioDto | null>(null);
   const [manualTrades, setManualTrades] = useState<Trade[]>([]);
   const [agentTrades, setAgentTrades] = useState<Trade[]>([]);
@@ -42,6 +46,9 @@ function App() {
     try {
       const db = await api.getDashboard();
       setDashboard(db);
+      if (db.exogenousLastSyncUtc) {
+        setLastRefreshUtc(db.exogenousLastSyncUtc);
+      }
       const perf = await api.getMonthlyPerformance();
       setPerformance(perf);
     } catch (err) {
@@ -93,21 +100,21 @@ function App() {
   const handleRefreshContext = async () => {
     setRefreshError(null);
     setRefreshStatus(null);
+    setIsRefreshing(true);
     try {
       const result = await api.refreshExogenousContext();
-      const poll = async () => {
-        const status = await api.getRefreshStatus(result.jobId);
-        setRefreshStatus(status);
-        if (status.status === "Queued" || status.status === "Running") {
-          setTimeout(poll, 2000);
-        } else if (status.status === "Succeeded") {
-          fetchData();
-        }
-      };
-      poll();
+      setRefreshStatus(result);
+      setLastRefreshUtc(result.lastRefreshUtc ?? result.finishedUtc ?? null);
+      if (result.status === "Succeeded") {
+        fetchData();
+      } else if (result.status === "Failed") {
+        setRefreshError(result.message || "Failed to refresh context.");
+      }
     } catch (err) {
       setRefreshError(err instanceof Error ? err.message : "Failed to refresh context.");
       console.error(err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -165,11 +172,29 @@ function App() {
     );
   }, [agentTrades, manualTrades]);
 
+  const lastManualTrade = useMemo(() => {
+    return manualTrades
+      .slice()
+      .sort((a, b) => new Date(b.timestampUtc).getTime() - new Date(a.timestampUtc).getTime())[0] ?? null;
+  }, [manualTrades]);
+
   const marketStale = useMemo(() => {
     if (!dashboard) return false;
     const diffMs = Date.now() - new Date(dashboard.market.timestampUtc).getTime();
     return diffMs > 2 * 60 * 1000;
   }, [dashboard]);
+
+  const lastRefreshLabel = useMemo(() => {
+    if (!lastRefreshUtc) {
+      return "No refresh yet";
+    }
+    const diffMs = Date.now() - new Date(lastRefreshUtc).getTime();
+    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+    if (diffMins === 0) {
+      return "Last refreshed just now";
+    }
+    return `Last refreshed ${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+  }, [lastRefreshUtc]);
 
   if (!dashboard && loading) {
     return (
@@ -278,12 +303,25 @@ function App() {
               <div className="flex flex-col items-start">
                 <button
                   onClick={handleRefreshContext}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-crypto-card border border-white/10 text-white hover:bg-crypto-card/80"
+                  disabled={isRefreshing}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold border border-white/10 text-white transition-all ${isRefreshing
+                    ? "bg-gray-700/70 cursor-not-allowed"
+                    : "bg-crypto-card hover:bg-crypto-card/80"
+                    }`}
                 >
-                  Refresh Context
+                  <span className="flex items-center gap-2">
+                    {isRefreshing && (
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {isRefreshing ? "Refreshing..." : "Refresh Context"}
+                  </span>
                 </button>
                 <div className="text-xs text-gray-400 mt-1">
-                  Status: {refreshStatus?.status ?? "Idle"}
+                  {isRefreshing ? "Refreshing exogenous context..." : lastRefreshLabel}
+                  {refreshStatus?.status === "Running" && " (already running)"}
                 </div>
               </div>
             </div>
@@ -343,6 +381,7 @@ function App() {
 
         {dashboard && viewMode === "simulator" && (
           <main className="space-y-6 animate-fade-in">
+            <ComparisonStrip data={comparison} />
             {marketStale && (
               <div className="bg-yellow-900/20 border border-yellow-500/40 text-yellow-100 px-4 py-3 rounded-lg">
                 Market snapshot is older than 2 minutes. Consider refreshing market data before executing trades.
@@ -377,6 +416,7 @@ function App() {
                 </div>
                 <div className="lg:col-span-1 space-y-6">
                   <MarketCard market={dashboard.market} />
+                  <AgentBiasPanel decision={dashboard.lastDecision} lastManualTrade={lastManualTrade} />
                   <PerformanceComparisonPanel data={comparison} />
                   {dashboard.exogenousTrace && <ExogenousDecisionTracePanel trace={dashboard.exogenousTrace} />}
                 </div>
