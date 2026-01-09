@@ -1,6 +1,6 @@
 import type {
     DashboardResponse,
-    ExogenousRefreshJobStatus,
+    ExogenousRefreshResponse,
     ManualTradeRequest,
     ManualTradeResponse,
     MonthlyPerformance,
@@ -32,18 +32,15 @@ export const api = {
         return res.json();
     },
 
-    refreshExogenousContext: async (): Promise<{ jobId: string }> => {
+    refreshExogenousContext: async (): Promise<ExogenousRefreshResponse> => {
         const res = await fetch(`${API_BASE}/api/exogenous/refresh`, { method: "POST" });
+        if (res.status === 409) {
+            return res.json();
+        }
         if (!res.ok) {
             const payload = await res.json().catch(() => ({}));
-            throw new Error(payload?.status || "Failed to refresh context");
+            throw new Error(payload?.message || "Failed to refresh context");
         }
-        return res.json();
-    },
-
-    getRefreshStatus: async (jobId: string): Promise<ExogenousRefreshJobStatus> => {
-        const res = await fetch(`${API_BASE}/api/exogenous/refresh/${jobId}`);
-        if (!res.ok) throw new Error("Failed to fetch refresh status");
         return res.json();
     },
 

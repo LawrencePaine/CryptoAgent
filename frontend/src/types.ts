@@ -73,10 +73,12 @@ export type DashboardResponse = {
 
 export type ExogenousDecisionTrace = {
   tickUtc: string;
+  summary: string;
   themes: ThemeSummary[];
   marketAlignment: Record<string, string>;
   modifiers: Modifiers;
   gatingReasons: string[];
+  why?: WhyReason[];
   topNarratives: NarrativeTrace[];
   topItems: ItemTrace[];
 };
@@ -92,6 +94,11 @@ export type Modifiers = {
   abstainModifier: number;
   confidenceThresholdModifier: number;
   positionSizeModifier?: number | null;
+};
+
+export type WhyReason = {
+  reason: string;
+  tag?: string | null;
 };
 
 export type NarrativeTrace = {
@@ -145,6 +152,16 @@ export type ExogenousRefreshJobStatus = {
   finishedUtc?: string | null;
   resultSummary?: ExogenousRefreshResultSummary | null;
   error?: string | null;
+};
+
+export type ExogenousRefreshResponse = {
+  status: "Running" | "Succeeded" | "Failed";
+  startedUtc?: string | null;
+  finishedUtc?: string | null;
+  lastRefreshUtc?: string | null;
+  itemsIngested: number;
+  itemsClassified: number;
+  message?: string | null;
 };
 
 export type ManualTradeRequest = {

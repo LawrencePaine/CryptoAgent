@@ -16,35 +16,14 @@ public class ExogenousRefreshController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<object>> StartRefresh(CancellationToken ct)
+    public async Task<ActionResult<ExogenousRefreshResponse>> StartRefresh(CancellationToken ct)
     {
-        var result = await _refreshService.StartRefreshAsync(ct);
-        if (result.Status == ExogenousRefreshStartStatus.AlreadyRunning)
+        var result = await _refreshService.RefreshAsync(ct);
+        if (result.Status == ExogenousRefreshStatus.Running)
         {
-            return Conflict(new { status = result.Status.ToString() });
+            return Conflict(result);
         }
 
-        if (result.Status == ExogenousRefreshStartStatus.Cooldown)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new
-            {
-                status = result.Status.ToString(),
-                nextAvailableUtc = result.NextAvailableUtc
-            });
-        }
-
-        return Ok(new { jobId = result.JobId });
-    }
-
-    [HttpGet("{jobId}")]
-    public ActionResult<ExogenousRefreshJobStatus> GetStatus(string jobId)
-    {
-        var status = _refreshService.GetStatus(jobId);
-        if (status == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(status);
+        return Ok(result);
     }
 }

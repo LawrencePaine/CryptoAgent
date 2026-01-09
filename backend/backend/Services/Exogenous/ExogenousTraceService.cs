@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using CryptoAgent.Api.Data.Entities;
 using CryptoAgent.Api.Models.Exogenous;
@@ -41,10 +42,13 @@ public class ExogenousTraceService : IExogenousTraceService
         var marketAlignment = DeserializeOrDefault(entity.MarketAlignmentJson, new Dictionary<string, string>());
         var gatingReasons = DeserializeOrDefault(entity.GatingReasonJson, new Dictionary<string, List<string>>());
 
+        var themes = BuildThemes(themeStrength, themeDirection, themeConflict);
+        var whyReasons = BuildWhyReasons(gatingReasons, entity.Notes, themeStrength, themeDirection, themeConflict, marketAlignment);
+
         var trace = new ExogenousDecisionTraceDto
         {
             TickUtc = entity.TimestampUtc,
-            Themes = BuildThemes(themeStrength, themeDirection, themeConflict),
+            Themes = themes,
             MarketAlignment = marketAlignment,
             Modifiers = new ModifiersDto
             {
@@ -52,7 +56,9 @@ public class ExogenousTraceService : IExogenousTraceService
                 ConfidenceThresholdModifier = (double)entity.ConfidenceThresholdModifier,
                 PositionSizeModifier = entity.PositionSizeModifier == 0m ? null : (double)entity.PositionSizeModifier
             },
-            GatingReasons = BuildGatingReasons(gatingReasons, entity.Notes, themeStrength, themeDirection, themeConflict, marketAlignment)
+            Summary = BuildSummary(themes, marketAlignment),
+            GatingReasons = whyReasons.Select(r => r.Reason).ToList(),
+            Why = whyReasons
         };
 
         if (!TryDeserialize(entity.TraceIdsJson, out List<string> traceIds))
@@ -186,7 +192,7 @@ public class ExogenousTraceService : IExogenousTraceService
             .ToList();
     }
 
-    private static List<string> BuildGatingReasons(
+    private static List<WhyReasonDto> BuildWhyReasons(
         Dictionary<string, List<string>> gatingReasons,
         string notes,
         Dictionary<string, decimal> strength,
@@ -194,31 +200,97 @@ public class ExogenousTraceService : IExogenousTraceService
         Dictionary<string, decimal> conflict,
         Dictionary<string, string> marketAlignment)
     {
-        var reasons = gatingReasons.Values.SelectMany(v => v).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+        var reasons = new List<WhyReasonDto>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddReason(string reason, string? tag)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                return;
+            }
+
+            var trimmed = reason.Trim();
+            if (!seen.Add(trimmed))
+            {
+                return;
+            }
+
+            reasons.Add(new WhyReasonDto
+            {
+                Reason = trimmed,
+                Tag = string.IsNullOrWhiteSpace(tag) ? null : NormalizeTag(tag)
+            });
+        }
+
+        foreach (var (tag, entries) in gatingReasons)
+        {
+            foreach (var entry in entries)
+            {
+                AddReason(entry, tag);
+            }
+        }
+
         if (reasons.Count == 0)
         {
-            reasons.AddRange(SplitNotes(notes));
+            foreach (var note in SplitNotes(notes))
+            {
+                AddReason(note, "Notes");
+            }
         }
 
         if (reasons.Count == 0)
         {
             foreach (var (asset, alignment) in marketAlignment)
             {
-                reasons.Add($"Market alignment {asset}: {alignment}.");
+                AddReason($"Market alignment {asset}: {alignment}.", "Market");
             }
 
             foreach (var metric in strength)
             {
                 var dir = direction.GetValueOrDefault(metric.Key, "NEUTRAL");
                 var conf = conflict.GetValueOrDefault(metric.Key, 0m);
-                reasons.Add($"{metric.Key} strength {metric.Value:F0}, direction {dir}, conflict {conf:F2}.");
+                AddReason($"{metric.Key} strength {metric.Value:F0}, direction {dir}, conflict {conf:F2}.", "Theme");
             }
         }
 
-        return reasons
-            .Where(r => !string.IsNullOrWhiteSpace(r))
-            .Take(6)
-            .ToList();
+        return reasons.Take(6).ToList();
+    }
+
+    private static string BuildSummary(IReadOnlyCollection<ThemeSummaryDto> themes, IReadOnlyDictionary<string, string> marketAlignment)
+    {
+        var summaryParts = new List<string>();
+
+        var topTheme = themes.OrderByDescending(t => t.Strength).FirstOrDefault();
+        if (topTheme != null)
+        {
+            summaryParts.Add(
+                $"{FormatTheme(topTheme.Theme)} is the strongest theme ({topTheme.Direction.ToLowerInvariant()}, strength {topTheme.Strength}).");
+        }
+
+        if (marketAlignment.Count > 0)
+        {
+            var alignment = string.Join(", ", marketAlignment.Select(kvp => $"{kvp.Key.ToUpperInvariant()} {kvp.Value.ToLowerInvariant()}"));
+            summaryParts.Add($"Market alignment: {alignment}.");
+        }
+
+        if (summaryParts.Count == 0)
+        {
+            summaryParts.Add("No active exogenous narratives were strong enough to influence decisions.");
+        }
+
+        return $"TL;DR: {string.Join(" ", summaryParts)}";
+    }
+
+    private static string NormalizeTag(string tag)
+    {
+        var normalized = tag.Replace("_", " ").Trim();
+        return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(normalized.ToLowerInvariant());
+    }
+
+    private static string FormatTheme(string theme)
+    {
+        return theme.Replace("_", " ");
     }
 
     private static List<string> SplitNotes(string notes)
