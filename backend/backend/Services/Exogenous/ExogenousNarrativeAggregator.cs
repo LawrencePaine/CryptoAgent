@@ -33,7 +33,9 @@ public class ExogenousNarrativeAggregator
         }
 
         var classifications = await _classificationRepository.GetByItemIdsAsync(items.Select(i => i.Id));
-        var classificationByItem = classifications.ToDictionary(c => c.ItemId, c => c);
+        var classificationByItem = classifications
+            .GroupBy(c => c.ItemId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).First());
         var added = 0;
         var windowStart = DateTime.UtcNow.AddDays(-30);
 
@@ -125,7 +127,9 @@ public class ExogenousNarrativeAggregator
         var itemIds = narrativeItems.Select(n => n.ItemId).ToList();
         var items = await _itemRepository.GetItemsByIdsAsync(itemIds);
         var classifications = await _classificationRepository.GetByItemIdsAsync(itemIds);
-        var classificationByItem = classifications.ToDictionary(c => c.ItemId, c => c);
+        var classificationByItem = classifications
+            .GroupBy(c => c.ItemId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).First());
 
         var weightByBias = new Dictionary<string, decimal>();
         var weightByHorizon = new Dictionary<string, decimal>();
