@@ -1,4 +1,4 @@
-import type { ExogenousDecisionTrace } from "../types";
+import type { ExogenousDecisionTrace, WhyReason } from "../types";
 
 type ExogenousDecisionTracePanelProps = {
   trace: ExogenousDecisionTrace;
@@ -26,7 +26,10 @@ const badgeTone = (value: string) => {
 
 export function ExogenousDecisionTracePanel({ trace }: ExogenousDecisionTracePanelProps) {
   const tickLabel = new Date(trace.tickUtc).toLocaleString();
-  const whyReasons = trace.why && trace.why.length > 0 ? trace.why : trace.gatingReasons.map((reason) => ({ reason }));
+  const whyReasons: WhyReason[] =
+    trace.why && trace.why.length > 0
+      ? trace.why
+      : trace.gatingReasons.map((reason) => ({ reason, tag: null }));
 
   return (
     <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 p-6 rounded-2xl shadow-lg backdrop-blur-sm">

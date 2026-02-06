@@ -29,11 +29,16 @@ else if (configuredUrls is { Length: > 0 })
     builder.WebHost.UseUrls(configuredUrls);
 }
 
+var logDirectory = builder.Configuration["LogDirectory"]
+    ?? Environment.GetEnvironmentVariable("LOG_DIR")
+    ?? (OperatingSystem.IsWindows() ? @"C:\CryptoAgentData\logs" : "/data/logs");
+Directory.CreateDirectory(logDirectory);
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
     .WriteTo.File(
-        path: @"C:\CryptoAgentData\logs\cryptoagent-.log",
+        path: Path.Combine(logDirectory, "cryptoagent-.log"),
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 14,
         shared: true)
@@ -192,6 +197,7 @@ app.UseCors();
 // Endpoints
 
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     var server = app.Services.GetRequiredService<IServer>();
