@@ -9,7 +9,7 @@ import type {
     Trade,
 } from "./types";
 
-const API_BASE = "http://localhost:5088"; // Adjust if needed
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
 export const api = {
     getDashboard: async (): Promise<DashboardResponse> => {
